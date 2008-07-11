@@ -1,5 +1,8 @@
 package Foundation::NSURL;
 
+use strict;
+use warnings;
+
 use base qw/Foundation::NSObject URI::http/;
 
 sub replacement {

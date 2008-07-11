@@ -1,5 +1,8 @@
 package Foundation::NSDate;
 
+use strict;
+use warnings;
+
 use base qw/Foundation::NSObject DateTime/;
 
 sub replacement {

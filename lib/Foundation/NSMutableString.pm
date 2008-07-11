@@ -1,5 +1,8 @@
 package Foundation::NSMutableString;
 
+use strict;
+use warnings;
+
 use base qw/Foundation::NSString/;
 
 sub replacement {

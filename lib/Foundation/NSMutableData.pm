@@ -1,5 +1,8 @@
 package Foundation::NSMutableData;
 
+use strict;
+use warnings;
+
 use base qw/Foundation::NSData/;
 
 sub data {

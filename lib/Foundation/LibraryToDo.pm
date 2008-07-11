@@ -1,5 +1,8 @@
 package Foundation::LibraryToDo;
 
+use strict;
+use warnings;
+
 use base qw/Foundation::ToDo Class::Accessor/;
 
 my %mapping = (
@@ -36,7 +39,6 @@ sub serialize {
     my $ret = {};
 
     for my $k (keys %mapping) {
-        $ret->{$keys}
     }
 
     return ["dict", $ret];

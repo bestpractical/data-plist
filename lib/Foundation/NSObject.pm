@@ -1,5 +1,8 @@
 package Foundation::NSObject;
 
+use strict;
+use warnings;
+
 sub init {
     my $self = shift;
 }
