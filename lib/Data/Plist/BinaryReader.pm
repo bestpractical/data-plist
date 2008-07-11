@@ -10,7 +10,7 @@ use MIME::Base64;
 
 sub new {
     my $class = shift;
-    return bless { offsets => [], refsize => undef, uids => [] } => $class;
+    return bless { offsets => [], refsize => undef } => $class;
 }
 
 sub read_misc {
@@ -65,7 +65,7 @@ sub read_real {    # real
 
     my ( $buf, $val );
     read( $self->{fh}, $buf, $byteLen );
-    if ( $objLen == 0 ) {    # 1 byte float = error?
+    if ( $objLen == 0 ) {         # 1 byte float = error?
         die "1 byte real found";
     } elsif ( $objLen == 1 ) {    # 2 byte float???
         die "2 byte real found";
@@ -78,7 +78,7 @@ sub read_real {    # real
     return [ "real", $val ];
 }
 
-sub read_date {                   # date
+sub read_date {
     my $self = shift;
     my ($objLen) = @_;
     die "Date > 8 bytes" if ( $objLen > 3 );
@@ -100,13 +100,14 @@ sub read_date {                   # date
     return [ "date", $val ];
 }
 
-sub read_data {                   # binary data
+sub read_data {
     my $self = shift;
     my ($byteLen) = @_;
 
     my $buf;
     read( $self->{fh}, $buf, $byteLen );
 
+    # Binary data is often a binary plist!  Unpack it.
     if ( $buf =~ /^bplist00/ ) {
         $buf = eval { (ref $self)->open_string($buf) } || $buf;
     }
@@ -114,7 +115,7 @@ sub read_data {                   # binary data
     return [ "data", $buf ];
 }
 
-sub read_string {    # byte (utf8?) string
+sub read_string {
     my $self = shift;
     my ($objLen) = @_;
 
@@ -126,7 +127,7 @@ sub read_string {    # byte (utf8?) string
     return [ "string", $buf ];
 }
 
-sub read_ustring {                            # unicode string
+sub read_ustring {
     my $self = shift;
     my ($objLen) = @_;
 
@@ -144,7 +145,7 @@ sub read_refs {
     return unpack( ( $self->{refsize} == 1 ? "C*" : "n*" ), $buf );
 }
 
-sub read_array {    # array
+sub read_array {
     my $self = shift;
     my ($objLen) = @_;
 
@@ -153,7 +154,7 @@ sub read_array {    # array
     ];
 }
 
-sub read_dict {     # dictionary
+sub read_dict {
     my $self = shift;
     my ($objLen) = @_;
     my %dict;
@@ -177,10 +178,9 @@ sub read_uid {
     my $self = shift;
     my ($objLen) = @_;
 
-    my $v = $self->read_int(0)->[1];
-    my $uid = [ UID => $v ];
-    push @{ $self->{uids} }, $uid;
-    return $uid;
+    # UIDs are stored internally identically to ints
+    my $v = $self->read_int($objLen)->[1];
+    return [ UID => $v ];;
 }
 
 sub binary_read {
