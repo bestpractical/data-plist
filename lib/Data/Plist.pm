@@ -3,20 +3,12 @@ package Data::Plist;
 use strict;
 use warnings;
 
-use Encode qw(decode encode);
-use Fcntl qw(:seek);
 use DateTime;
-use POSIX ();
-use Math::BigInt;
-use MIME::Base64;
 use UNIVERSAL::require;
-
-use vars qw/$VERSION/;
-$VERSION = "1.5";
 
 sub new {
     my $class = shift;
-    return bless { uids => undef, data => undef, @_ } => $class;
+    return bless { data => undef, @_ } => $class;
 }
 
 sub collapse {
@@ -98,19 +90,19 @@ sub unref {
 
 sub reify {
     my $self = shift;
-    my $data = shift;
+    my($data, $prefix) = @_;
 
     return $data unless ref $data;
     if (ref $data eq "HASH") {
         my $hash = { %{$data} };
         my $class = delete $hash->{'$class'};
-        $hash->{$_} = $self->reify($hash->{$_}) for keys %{$hash};
+        $hash->{$_} = $self->reify($hash->{$_}, $prefix) for keys %{$hash};
         if ($class and ref $class and ref $class eq "HASH" and $class->{'$classname'}) {
             my $classname = "Foundation::" . $class->{'$classname'};
             if (not $classname->require) {
                 warn "Can't require $classname: $@\n";
-            } elsif (not $classname->isa("Foundation::NSObject")) {
-                warn "$classname isn't a Foundation::NSObject\n";
+            } elsif (not $classname->isa($prefix . "::NSObject")) {
+                warn "$classname isn't a @{[$prefix]}::NSObject\n";
             } else {
                 bless($hash, $classname);
                 $hash = $hash->replacement;
@@ -118,7 +110,7 @@ sub reify {
         }
         return $hash;
     } elsif (ref $data eq "ARRAY") {
-        return [map $self->reify($_), @{$data}];
+        return [map $self->reify($_, $prefix), @{$data}];
     } else {
         return $data;
     }
@@ -132,8 +124,20 @@ sub raw_object {
 
 sub object {
     my $self = shift;
+    my $prefix = shift;
+
+    my $base = $prefix . "::NSObject";
+    unless ($base->require) {
+        warn "Can't require base class $base: $@\n";
+        return;
+    }
+    
     return unless $self->is_archive;
-    return $self->reify($self->collapse($self->raw_object));
+    return $self->reify($self->collapse($self->raw_object), $prefix);
+}
+
+sub serialize {
+    my $self = shift;
 }
 
 1;
