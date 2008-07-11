@@ -16,35 +16,35 @@ sub new {
 sub read_misc {
     my $self = shift;
 
-    my ($objLen) = @_;
-    if ( $objLen == 0 ) {
+    my ($type) = @_;
+    if ( $type == 0 ) {
         return [ "null", 0 ];
-    } elsif ( $objLen == 8 ) {
+    } elsif ( $type == 8 ) {
         return [ "false", 0 ];
-    } elsif ( $objLen == 9 ) {
+    } elsif ( $type == 9 ) {
         return [ "true", 1 ];
-    } elsif ( $objLen == 15 ) {
+    } elsif ( $type == 15 ) {
         return [ "fill", 15 ];
+    } else {
+        return [ "???", $type ];
     }
 }
 
 sub read_int {    # int
     my $self = shift;
+    my ($size) = @_;
 
-    my ($objLen) = @_;
-    die "Integer > 8 bytes = $objLen" if ( $objLen > 3 );
-
-    my $byteLen = 1 << $objLen;
+    die "Integer > 8 bytes = $size" if ( $size > 3 );
 
     my ( $buf, $val );
-    read( $self->{fh}, $buf, $byteLen );
-    if ( $objLen == 0 ) {
+    read( $self->{fh}, $buf, 1 << $size );
+    if ( $size == 0 ) {
         $val = unpack( "C", $buf );
-    } elsif ( $objLen == 1 ) {
+    } elsif ( $size == 1 ) {
         $val = unpack( "n", $buf );
-    } elsif ( $objLen == 2 ) {
+    } elsif ( $size == 2 ) {
         $val = unpack( "N", $buf );
-    } elsif ( $objLen == 3 ) {
+    } elsif ( $size == 3 ) {
 
         my ( $hw, $lw ) = unpack( "NN", $buf );
         $val = Math::BigInt->new($hw)->blsft(32)->bior($lw);
@@ -58,20 +58,18 @@ sub read_int {    # int
 
 sub read_real {    # real
     my $self = shift;
-    my ($objLen) = @_;
-    die "Real > 8 bytes" if ( $objLen > 3 );
-
-    my $byteLen = 1 << $objLen;
+    my ($size) = @_;
+    die "Real > 8 bytes" if ( $size > 3 );
 
     my ( $buf, $val );
-    read( $self->{fh}, $buf, $byteLen );
-    if ( $objLen == 0 ) {         # 1 byte float = error?
+    read( $self->{fh}, $buf, 1 << $size );
+    if ( $size == 0 ) {         # 1 byte float = error?
         die "1 byte real found";
-    } elsif ( $objLen == 1 ) {    # 2 byte float???
+    } elsif ( $size == 1 ) {    # 2 byte float???
         die "2 byte real found";
-    } elsif ( $objLen == 2 ) {
+    } elsif ( $size == 2 ) {
         $val = unpack( "f", reverse $buf );
-    } elsif ( $objLen == 3 ) {
+    } elsif ( $size == 3 ) {
         $val = unpack( "d", reverse $buf );
     }
 
@@ -80,32 +78,20 @@ sub read_real {    # real
 
 sub read_date {
     my $self = shift;
-    my ($objLen) = @_;
-    die "Date > 8 bytes" if ( $objLen > 3 );
+    my ($size) = @_;
+    die "Date > 8 bytes" if ( $size > 3 );
+    die "Date < 4 bytes" if ( $size < 2 );
 
-    my $byteLen = 1 << $objLen;
-
-    my ( $buf, $val );
-    read( $self->{fh}, $buf, $byteLen );
-    if ( $objLen == 0 ) {         # 1 byte NSDate = error?
-        die "1 byte NSDate found";
-    } elsif ( $objLen == 1 ) {    # 2 byte NSDate???
-        die "2 byte NSDate found";
-    } elsif ( $objLen == 2 ) {
-        $val = unpack( "f", reverse $buf );
-    } elsif ( $objLen == 3 ) {
-        $val = unpack( "d", reverse $buf );
-    }
-
-    return [ "date", $val ];
+    # Dates are just stored as floats
+    return [ "date", $self->read_real($size)->[1] ];
 }
 
 sub read_data {
     my $self = shift;
-    my ($byteLen) = @_;
+    my ($size) = @_;
 
     my $buf;
-    read( $self->{fh}, $buf, $byteLen );
+    read( $self->{fh}, $buf, $size );
 
     # Binary data is often a binary plist!  Unpack it.
     if ( $buf =~ /^bplist00/ ) {
@@ -117,10 +103,10 @@ sub read_data {
 
 sub read_string {
     my $self = shift;
-    my ($objLen) = @_;
+    my ($size) = @_;
 
     my $buf;
-    read( $self->{fh}, $buf, $objLen );
+    read( $self->{fh}, $buf, $size );
 
     $buf = pack "U0C*", unpack "C*", $buf;    # mark as Unicode
 
@@ -129,10 +115,10 @@ sub read_string {
 
 sub read_ustring {
     my $self = shift;
-    my ($objLen) = @_;
+    my ($size) = @_;
 
     my $buf;
-    read( $self->{fh}, $buf, 2 * $objLen );
+    read( $self->{fh}, $buf, 2 * $size );
 
     return [ "ustring", decode( "UTF-16BE", $buf ) ];
 }
@@ -147,21 +133,21 @@ sub read_refs {
 
 sub read_array {
     my $self = shift;
-    my ($objLen) = @_;
+    my ($size) = @_;
 
     return [
-        "array", [ map { $self->binary_read($_) } $self->read_refs($objLen) ]
+        "array", [ map { $self->binary_read($_) } $self->read_refs($size) ]
     ];
 }
 
 sub read_dict {
     my $self = shift;
-    my ($objLen) = @_;
+    my ($size) = @_;
     my %dict;
 
     # read keys
-    my @keys = $self->read_refs($objLen);
-    my @objs = $self->read_refs($objLen);
+    my @keys = $self->read_refs($size);
+    my @objs = $self->read_refs($size);
 
     for my $j ( 0 .. $#keys ) {
         my $key = $self->binary_read( $keys[$j] );
@@ -176,19 +162,24 @@ sub read_dict {
 
 sub read_uid {
     my $self = shift;
-    my ($objLen) = @_;
+    my ($size) = @_;
 
     # UIDs are stored internally identically to ints
-    my $v = $self->read_int($objLen)->[1];
-    return [ UID => $v ];;
+    my $v = $self->read_int($size)->[1];
+    return [ UID => $v ];
 }
 
 sub binary_read {
     my $self = shift;
     my ($objNum) = @_;
 
-    seek( $self->{fh}, $self->{offsets}[$objNum], SEEK_SET )
-        if defined $objNum;
+    if (defined $objNum) {
+        unless ($objNum < @{$self->{offsets}}) {
+            warn "Bad offset: $objNum\n";
+            return;
+        }
+        seek( $self->{fh}, $self->{offsets}[$objNum], SEEK_SET );
+    }
 
     # get object type/size
     my $buf;
@@ -196,11 +187,11 @@ sub binary_read {
     if ( read( $self->{fh}, $buf, 1 ) != 1 ) {
         die "Didn't read type byte: $!";
     }
-    my $objLen = unpack( "C*", $buf ) & 0xF;
+    my $size = unpack( "C*", $buf ) & 0xF;
     $buf = unpack( "H*", $buf );
     my $objType = substr( $buf, 0, 1 );
-    if ( $objType ne "0" && $objType ne "8" && $objLen == 15 ) {
-        $objLen = $self->binary_read->[1];
+    if ( $objType ne "0" && $objType ne "8" && $size == 15 ) {
+        $size = $self->binary_read->[1];
     }
 
     my %types = (
@@ -219,7 +210,7 @@ sub binary_read {
     return [ "??? $objType ???", undef ] unless $types{$objType};
     my $method = "read_" . $types{$objType};
     die "Can't $method" unless $self->can($method);
-    my $v = $self->$method($objLen);
+    my $v = $self->$method($size);
     return $v;
 }
 
@@ -248,33 +239,61 @@ sub open_fh {
 
     my ($fh) = @_;
 
+    my $buf;
     $self->{fh} = $fh;
+    seek( $self->{fh}, 0, SEEK_SET );
+    read( $self->{fh}, $buf, 8);
+    unless ($buf eq "bplist00") {
+        die "Not a binary plist file\n";
+    }
 
     # get trailer
     seek( $self->{fh}, -32, SEEK_END );
-    my $buf;
-    read( $self->{fh}, $buf, 32 );
+    my $end = tell( $self->{fh} );
+
+    unless (read( $self->{fh}, $buf, 32 ) == 32) {
+        die "Read of plist trailer failed\n";
+    }
     my ( $OffsetSize, $NumObjects, $TopObject, $OffsetTableOffset );
     (   $OffsetSize, $self->{refsize}, $NumObjects, $TopObject,
         $OffsetTableOffset
     ) = unpack "x6CC(x4N)3", $buf;
 
+    # Sanity check the trailer
+    if ($OffsetSize < 1 or $OffsetSize > 4) {
+        die "Invalid offset size\n";
+    } elsif ( $self->{refsize} < 1 or $self->{refsize} > 2) {
+        die "Invalid reference size\n";
+    } elsif ( 2 ** (8 * $self->{refsize}) < $NumObjects ) {
+        die "Reference size (@{[$self->{refsize}]}) is too small for purported number of objects ($NumObjects)\n";
+    } elsif ( $TopObject >= $NumObjects ) {
+        die "Invalid top object identifier\n";
+    } elsif ( $OffsetTableOffset < 8 or $OffsetTableOffset > $end or $OffsetTableOffset + $NumObjects * $OffsetSize > $end) {
+        die "Invalid offset table address\n";
+    }
+
     # get the offset table
     seek( $fh, $OffsetTableOffset, SEEK_SET );
 
-    my $rawOffsetTable;
+    my $offsetTable;
     my $readSize
-        = read( $self->{fh}, $rawOffsetTable, $NumObjects * $OffsetSize );
+        = read( $self->{fh}, $offsetTable, $NumObjects * $OffsetSize );
     if ( $readSize != $NumObjects * $OffsetSize ) {
-        die "rawOffsetTable read $readSize expected ",
+        die "Offset table read $readSize bytes, expected ",
             $NumObjects * $OffsetSize;
     }
 
     my @Offsets = unpack( [ "", "C*", "n*", "(H6)*", "N*" ]->[$OffsetSize],
-        $rawOffsetTable );
+        $offsetTable );
     if ( $OffsetSize == 3 ) {
         @Offsets = map { hex($_) } @Offsets;
     }
+
+    # Catch invalid offset addresses in the offset table
+    if (grep {$_ < 8 or $_ >= $end} @Offsets) {
+        die "Invalid address in offset table\n";
+    }
+
     $self->{offsets} = \@Offsets;
 
     my $top = $self->binary_read($TopObject);
