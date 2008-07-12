@@ -6,6 +6,7 @@ use lib 'lib';
 use YAML;
 use Data::Plist;
 use Data::Plist::BinaryReader;
+use Data::Plist::XMLWriter;
 use Email::MIME;
 use File::Slurp;
 
@@ -17,5 +18,6 @@ for my $f (@ARGV) {
     }
 
     my $p = Data::Plist::BinaryReader->open_string($content);
-    print YAML::Dump($p->object("Foundation"));
+    print YAML::Dump($p->raw_object);
+#    print Data::Plist::XMLWriter->open_string($p->raw_object);
 }

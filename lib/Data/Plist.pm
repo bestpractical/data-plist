@@ -64,7 +64,7 @@ sub is_archive {
     return unless exists $data->[1]{'$top'};
 
     return unless exists $data->[1]{'$version'};
-    return unless $data->[1]{'$version'}[0] eq "int";
+    return unless $data->[1]{'$version'}[0] eq "integer";
     return unless $data->[1]{'$version'}[1] eq "100000";
 
     return 1;
@@ -134,10 +134,6 @@ sub object {
     
     return unless $self->is_archive;
     return $self->reify($self->collapse($self->raw_object), $prefix);
-}
-
-sub serialize {
-    my $self = shift;
 }
 
 1;

@@ -3,15 +3,11 @@ package Data::Plist::BinaryReader;
 use strict;
 use warnings;
 
+use base qw/Data::Plist::Reader/;
+
 use Encode qw(decode);
 use Fcntl qw(:seek);
 use Math::BigInt;
-use MIME::Base64;
-
-sub new {
-    my $class = shift;
-    return bless { offsets => [], refsize => undef } => $class;
-}
 
 sub read_misc {
     my $self = shift;
@@ -30,7 +26,7 @@ sub read_misc {
     }
 }
 
-sub read_int {    # int
+sub read_integer {
     my $self = shift;
     my ($size) = @_;
 
@@ -53,17 +49,17 @@ sub read_int {    # int
         }
     }
 
-    return [ "int", $val ];
+    return [ "integer", $val ];
 }
 
-sub read_real {    # real
+sub read_real {
     my $self = shift;
     my ($size) = @_;
     die "Real > 8 bytes" if ( $size > 3 );
 
     my ( $buf, $val );
     read( $self->{fh}, $buf, 1 << $size );
-    if ( $size == 0 ) {         # 1 byte float = error?
+    if ( $size == 0 ) {    # 1 byte float = error?
         die "1 byte real found";
     } elsif ( $size == 1 ) {    # 2 byte float???
         die "2 byte real found";
@@ -95,7 +91,7 @@ sub read_data {
 
     # Binary data is often a binary plist!  Unpack it.
     if ( $buf =~ /^bplist00/ ) {
-        $buf = eval { (ref $self)->open_string($buf) } || $buf;
+        $buf = eval { ( ref $self )->open_string($buf) } || $buf;
     }
 
     return [ "data", $buf ];
@@ -165,7 +161,7 @@ sub read_uid {
     my ($size) = @_;
 
     # UIDs are stored internally identically to ints
-    my $v = $self->read_int($size)->[1];
+    my $v = $self->read_integer($size)->[1];
     return [ UID => $v ];
 }
 
@@ -173,8 +169,8 @@ sub binary_read {
     my $self = shift;
     my ($objNum) = @_;
 
-    if (defined $objNum) {
-        unless ($objNum < @{$self->{offsets}}) {
+    if ( defined $objNum ) {
+        unless ( $objNum < @{ $self->{offsets} } ) {
             warn "Bad offset: $objNum\n";
             return;
         }
@@ -183,54 +179,32 @@ sub binary_read {
 
     # get object type/size
     my $buf;
+    read( $self->{fh}, $buf, 1 )
+        or die "Can't read type byte: $!\byte:";
 
-    if ( read( $self->{fh}, $buf, 1 ) != 1 ) {
-        die "Didn't read type byte: $!";
-    }
-    my $size = unpack( "C*", $buf ) & 0xF;
-    $buf = unpack( "H*", $buf );
-    my $objType = substr( $buf, 0, 1 );
-    if ( $objType ne "0" && $objType ne "8" && $size == 15 ) {
+    my $size    = unpack( "C*", $buf ) & 0x0F;    # Low nybble is size
+    my $objType = unpack( "C*", $buf ) >> 4;      # High nybble is type
+    if ( $objType != 0 and $objType != 8 and $size == 15 ) {
         $size = $self->binary_read->[1];
     }
 
     my %types = (
-        0 => "misc",
-        1 => "int",
-        2 => "real",
-        3 => "date",
-        4 => "data",
-        5 => "string",
-        6 => "ustring",
-        8 => "uid",
-        a => "array",
-        d => "dict",
+        0  => "misc",
+        1  => "integer",
+        2  => "real",
+        3  => "date",
+        4  => "data",
+        5  => "string",
+        6  => "ustring",
+        8  => "uid",
+        10 => "array",
+        13 => "dict",
     );
 
     return [ "??? $objType ???", undef ] unless $types{$objType};
     my $method = "read_" . $types{$objType};
     die "Can't $method" unless $self->can($method);
-    my $v = $self->$method($size);
-    return $v;
-}
-
-sub open_string {
-    my $self = shift;
-    my ($content) = @_;
-
-    my $fh;
-    open( $fh, "<", \$content );
-    return $self->open_fh($fh);
-}
-
-sub open_file {
-    my $self = shift;
-    my ($filename) = @_;
-
-    my $fh;
-    open( $fh, "<", $filename ) or die "can't open $filename for conversion";
-    binmode($fh);
-    return $self->open_fh($fh);
+    return $self->$method($size);
 }
 
 sub open_fh {
@@ -242,8 +216,8 @@ sub open_fh {
     my $buf;
     $self->{fh} = $fh;
     seek( $self->{fh}, 0, SEEK_SET );
-    read( $self->{fh}, $buf, 8);
-    unless ($buf eq "bplist00") {
+    read( $self->{fh}, $buf, 8 );
+    unless ( $buf eq "bplist00" ) {
         die "Not a binary plist file\n";
     }
 
@@ -251,24 +225,29 @@ sub open_fh {
     seek( $self->{fh}, -32, SEEK_END );
     my $end = tell( $self->{fh} );
 
-    unless (read( $self->{fh}, $buf, 32 ) == 32) {
+    unless ( read( $self->{fh}, $buf, 32 ) == 32 ) {
         die "Read of plist trailer failed\n";
     }
+    local $self->{refsize};
     my ( $OffsetSize, $NumObjects, $TopObject, $OffsetTableOffset );
     (   $OffsetSize, $self->{refsize}, $NumObjects, $TopObject,
         $OffsetTableOffset
     ) = unpack "x6CC(x4N)3", $buf;
 
     # Sanity check the trailer
-    if ($OffsetSize < 1 or $OffsetSize > 4) {
+    if ( $OffsetSize < 1 or $OffsetSize > 4 ) {
         die "Invalid offset size\n";
-    } elsif ( $self->{refsize} < 1 or $self->{refsize} > 2) {
+    } elsif ( $self->{refsize} < 1 or $self->{refsize} > 2 ) {
         die "Invalid reference size\n";
-    } elsif ( 2 ** (8 * $self->{refsize}) < $NumObjects ) {
-        die "Reference size (@{[$self->{refsize}]}) is too small for purported number of objects ($NumObjects)\n";
+    } elsif ( 2**( 8 * $self->{refsize} ) < $NumObjects ) {
+        die
+            "Reference size (@{[$self->{refsize}]}) is too small for purported number of objects ($NumObjects)\n";
     } elsif ( $TopObject >= $NumObjects ) {
         die "Invalid top object identifier\n";
-    } elsif ( $OffsetTableOffset < 8 or $OffsetTableOffset > $end or $OffsetTableOffset + $NumObjects * $OffsetSize > $end) {
+    } elsif ( $OffsetTableOffset < 8
+        or $OffsetTableOffset > $end
+        or $OffsetTableOffset + $NumObjects * $OffsetSize > $end )
+    {
         die "Invalid offset table address\n";
     }
 
@@ -290,11 +269,11 @@ sub open_fh {
     }
 
     # Catch invalid offset addresses in the offset table
-    if (grep {$_ < 8 or $_ >= $end} @Offsets) {
+    if ( grep { $_ < 8 or $_ >= $end } @Offsets ) {
         die "Invalid address in offset table\n";
     }
 
-    $self->{offsets} = \@Offsets;
+    local $self->{offsets} = \@Offsets;
 
     my $top = $self->binary_read($TopObject);
     close($fh);
