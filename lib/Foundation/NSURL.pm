@@ -12,9 +12,9 @@ sub replacement {
     return $uri;
 }
 
-sub serialize {
+sub serialize_equiv {
     my $self = shift;
-    return { "NS.relative" => $self->as_string };
+    return { "NS.relative" => $self->as_string, "NS.base" => undef };
 }
 
 1;

@@ -14,7 +14,7 @@ sub open_fh {
     my ( $fh, $object ) = @_;
     local $self->{x}
         = XML::Writer->new( OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 8 );
-    $self->{x}->xmlDecl();
+    $self->{x}->xmlDecl( "UTF-8" );
     $self->{x}->doctype(
         "plist",
         "-//Apple//DTD PLIST 1.0//EN",

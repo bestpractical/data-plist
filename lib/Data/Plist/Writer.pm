@@ -64,9 +64,11 @@ sub serialize {
     my $self = shift;
     my $object = shift;
 
+    $object = $object->serialize if ref($object) ne "ARRAY" and $object->can("serialize");
+
     local $self->{objects}  = [];
     local $self->{objcache} = {};
-    my $top = $self->fold_uids( [ dict => { root => $object } ] );
+    my $top = $self->fold_uids( [ dict => { root => [ UID => $object ] } ] );
 
     return [
         dict => {

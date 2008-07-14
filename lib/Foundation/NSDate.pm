@@ -12,9 +12,12 @@ sub replacement {
     return $dt;
 }
 
-sub serialize {
+sub serialize_equiv {
     my $self = shift;
-    return { "NS.time" => $self->epoch - 978307200 };
+    my $secs = ($self->epoch - 978307200);
+    $secs += $self->nanosecond / 1e9;
+    $secs .= ".0" unless $secs =~ /\D/; # This forces it to be stored as "real"
+    return { "NS.time" => $secs };
 }
 
 1;

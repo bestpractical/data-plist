@@ -18,6 +18,5 @@ for my $f (@ARGV) {
     }
 
     my $p = Data::Plist::BinaryReader->open_string($content);
-    print YAML::Dump($p->raw_object);
-#    print Data::Plist::XMLWriter->open_string($p->raw_object);
+    print Data::Plist::XMLWriter->open_string($p->object("Foundation"));
 }
