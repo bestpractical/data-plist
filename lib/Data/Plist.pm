@@ -6,6 +6,9 @@ use warnings;
 use DateTime;
 use UNIVERSAL::require;
 
+use vars qw/$VERSION/;
+$VERSION = "0.1";
+
 sub new {
     my $class = shift;
     return bless { data => undef, @_ } => $class;
