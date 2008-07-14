@@ -5,7 +5,7 @@ use warnings;
 
 use base qw/Data::Plist::Writer/;
 
-sub open_fh {
+sub write_fh {
 }
 
 1;

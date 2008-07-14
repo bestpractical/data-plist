@@ -14,7 +14,7 @@ sub serialize_equiv {
     my $self = shift;
     return $self->SUPER::serialize_equiv unless ref $self->data;
     # XXX TODO: This should be BinaryWriter, but it hasn't been written yet
-    return { "NS.data" => Data::Plist::XMLWriter->open_string($self->data) };
+    return { "NS.data" => Data::Plist::XMLWriter->write($self->data) };
 }
 
 1;

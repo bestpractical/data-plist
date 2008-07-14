@@ -8,32 +8,25 @@ sub new {
     return bless {} => $class;
 }
 
-sub open_string {
+sub write {
     my $self = shift;
-    my ($object) = @_;
+    my $object = pop;
+    my $to = shift;
 
-    my $fh;
-    my $content;
-    open( $fh, ">", \$content );
-    $self->open_fh($fh, $object) or return "moose";
-    return $content;
-}
-
-sub open_file {
-    my $self = shift;
-    my ($filename, $object) = @_;
-
-    my $fh;
-    open( $fh, ">", $filename ) or die "can't open $filename for conversion";
-    binmode($fh);
-    return $self->open_fh($fh, $object);
-}
-
-sub open_fh {
-    my $self = shift;
-    my ($fh, $object) = @_;
-
-    die "Unimplemented!";
+    if (not $to) {
+        my $content;
+        my $fh;
+        open( $fh, ">", \$content );
+        $self->write_fh($fh, $object) or return;
+        return $content;
+    } elsif (ref $to) {
+        $self->write_fh($to, $object)
+    } else {
+        my $fh;
+        open( $fh, ">", $to ) or die "Can't open $to for writing: $!";
+        $self->write_fh($fh, $object) or return;
+    }
+    return;
 }
 
 sub fold_uids {

@@ -7,7 +7,7 @@ use base qw/Data::Plist::Writer/;
 use XML::Writer;
 use MIME::Base64 qw//;
 
-sub open_fh {
+sub write_fh {
     my $self = shift;
     $self = $self->new() unless ref $self;
 
