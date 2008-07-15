@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use base qw/Data::Plist::Reader/;
+use Data::Plist;
 
 use Encode qw(decode);
 use Fcntl qw(:seek);
@@ -222,8 +223,12 @@ sub open_fh {
     }
 
     # get trailer
-    seek( $self->{fh}, -32, SEEK_END );
+    eval {seek( $self->{fh}, -32, SEEK_END )}
+      or die "Read of plist trailer failed\n";
     my $end = tell( $self->{fh} );
+
+    die "Read of plist trailer failed\n"
+      unless $end >= 8;
 
     unless ( read( $self->{fh}, $buf, 32 ) == 32 ) {
         die "Read of plist trailer failed\n";
@@ -269,7 +274,14 @@ sub open_fh {
     }
 
     # Catch invalid offset addresses in the offset table
-    if ( grep { $_ < 8 or $_ >= $end } @Offsets ) {
+    if (grep {
+            $_ < 8
+                or $_ >= $end
+                or ($_ >= $OffsetTableOffset
+                and $_ < $OffsetTableOffset + $NumObjects * $OffsetSize )
+        } @Offsets
+        )
+    {
         die "Invalid address in offset table\n";
     }
 
