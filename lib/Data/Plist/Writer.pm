@@ -53,11 +53,45 @@ sub fold_uids {
     }
 }
 
+sub serialize_value {
+    my $self = shift;
+    my ($value) = @_;
+    if (not defined $value) {
+        return [ string => '$null' ];
+    } elsif ( ref $value ) {
+        if ( ref $value eq "ARRAY" ) {
+            return [
+                array => [ map { $self->serialize_value($_) } @{$value} ] ];
+        } elsif ( ref $value and ref $value eq "HASH" ) {
+            my %hash = %{$value};
+            $hash{$_} = $self->serialize_value( $hash{$_} ) for keys %hash;
+            return [ dict => \%hash ];
+        } elsif ($value->isa("Foundation::NSObject")) {
+            return $value->serialize;
+        } else {
+            die "Can't serialize unknown ref @{[ref $value]}\n";
+        }
+    } elsif ( $value !~ /\D/ ) {
+        return [ integer => $value ];
+    } elsif ( Scalar::Util::looks_like_number($value) ) {
+        return [ real => $value ];
+    } elsif ( $value =~ /\0/ or $value =~ /<\?xml/) {
+        # XXX TODO: The /<\?xml/ is a hack to get it labelled DATA
+        # until we use BinaryWriter to write nested plists
+        return [ data => $value ];
+    } else {
+        return [ string => $value ];
+    }
+}
+
 sub serialize {
     my $self = shift;
     my $object = shift;
 
-    $object = $object->serialize if ref($object) ne "ARRAY" and $object->can("serialize");
+    return $self->serialize_value($object)
+      if ref($object) =~ /ARRAY|HASH/ or not $object->can("serialize");
+
+    $object = $object->serialize;
 
     local $self->{objects}  = [];
     local $self->{objcache} = {};
