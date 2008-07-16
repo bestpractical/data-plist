@@ -21,13 +21,24 @@ sub write_fh {
         $self->{refsize} = 1;
     }
     print $fh "bplist00";
-
+    my $top_index   = $self->dispatch($object);
+    my $offset_size = 1;
+    if ( $self->{index}->[-1] > 65535 ) {
+        $offset_size = 4;
+    }
+    elsif ( $self->{index}->[-1] > 255 ) {
+        $offset_size = 2;
+    }
+    my $table_offset = tell $fh;
+    for (@$self->{index}){
+	print $fh (pack ($self->pack_in($offset_size)), $_);
+    }
+    print $fh ( pack "x6CC", $offset_size, $self->{refsize} );
+    print $fh ( pack "x4N", $self->{size} );
+    print $fh ( pack "x4N", $top_index );
+    print $fh ( pack "x4N", $table_offset );
+    close $fh;
     return 1;
-}
-
-sub binary_write {
-    my $self = shift;
-    my @ref;
 }
 
 sub dispatch {
@@ -40,7 +51,7 @@ sub dispatch {
 }
 
 sub make_type {
-    my $self = $shift;
+    my $self = shift;
     my ( $typ, $len ) = @_;
     my $ans = "";
 
@@ -51,7 +62,8 @@ sub make_type {
     }
     else {
         $typ .= "f";
-        $optint = MakeInt($len);
+	my $optlen = $self->int_length($len);
+	$optint = pack( "C" . $self->pack_in($optlen), hex("1" . $optlen), $len)
     }
     $ans = pack( "H*", $typ ) . $optint;
 
@@ -61,37 +73,24 @@ sub make_type {
 sub write_int {
     my $self = shift;
     my ( $int, $type ) = @_;
-    my $ans = "";
+    my $fmt;
 
     unless ( defined $type ) {
-        $type = 1;
+        $type = "1";
     }
-    if ( $int > 65535 ) {    # 4 byte int
-        $ans = "\x" . $type "2" . pack( "N", $int );
-    }
-    elsif ( $int > 255 ) {    # 2 byte int
-        $ans = "\x" . $type "1" . pack( "n", $int );
-    }
-    else {
-        $ans = "\x" . $type "0" . pack( "C", $int );
-    }
-
-    my $current = tell $fh;
-    print $fh $ans;
-    push @{ $self->{index} }, $current;
-    return ( @{ $self->{index} } - 1 );
+    my $len = $self->int_length($int);
+    $fmt = $self->pack_in($len);
+    my $obj = "\x" . $type . $len . pack($fmt, $int);
+    return $self->binary_write($obj);
 }
 
 sub write_string {
     my $self = shift;
     my ($string) = @_;
 
-    my $type = make_type( "5", length($string) );
+    my $type = $self->make_type( "5", length($string) );
     my $obj = $type . pack( "U", $string );
-    my $current = tell $fh;
-    print $fh $obj;
-    push @{ $self->{index} }, $current;
-    return ( @{ $self->{index} } - 1 );
+    return $self->binary_write($obj);
 }
 
 sub write_ustring {
@@ -108,16 +107,10 @@ sub write_dict {
         push @keys, $self->dispatch( [ "string", $key ] );
         push @values, $self->dispatch( $hash->{$key} );
     }
-    my $current = tell $fh;
-    print $fh make_type( "d", scalar keys(%$hash) );
-    my $packvar;
-    if ( $self->{refsize} = 2 ) {    # 4 byte int
-        $packvar = "n";
-    }
-    else {
-        $packvar = "C";
-    }
-    print $fh pack $packvar, $_ for @keys, @values;
+    my $current = tell $self->{fh};
+    print $self->{fh}, $self->make_type( "d", scalar keys(%$hash) );
+    my $packvar = $self->pack_in($self->{refsize});
+    print $self->{fh}, pack $packvar, $_ for @keys, @values;
     push @{ $self->{index} }, $current;
     return ( @{ $self->{index} } - 1 );
 }
@@ -130,16 +123,10 @@ sub write_array {
     for (@$array) {
         push @values, $self->dispatch($_);
     }
-    my $current = tell $fh;
-    print $fh make_type( "a", $size );
-    my $packvar;
-    if ( $self->{refsize} = 2 ) {    # 4 byte int
-        $packvar = "n";
-    }
-    else {
-        $packvar = "C";
-    }
-    print $fh pack $packvar, $_ for @values;
+    my $current = tell $self->{fh};
+    print $self->{fh}, $self->make_type( "a", $size );
+    my $packvar = $self->pack_in($self->{refsize});
+    print $self->{fh}, pack $packvar, $_ for @values;
     push @{ $self->{index} }, $current;
     return ( @{ $self->{index} } - 1 );
 }
@@ -147,30 +134,104 @@ sub write_array {
 sub write_uid {
     my $self    = shift;
     my ($id)    = @_;
-    my $obj     = make_int( $value, "8" );
-    my $current = tell $fh;
-    print $fh $obj;
-    push @{ $self->{index} }, $current;
-    return ( @{ $self->{index} } - 1 );
+    return $self->write_int( $id, "8" );
+}
+
+sub write_real {
+    my $self    = shift;
+    my ($float) = @_;
+    my $type    = $self->make_type( "2", 4 );
+    my $obj     = $type . reverse( pack( "d", $float ) );
+    return $self->binary_write($obj);
+}
+
+sub write_date {
+    my $self    = shift;
+    my ($date)  = @_;
+    my $type    = $self->make_type( "3", 4 );
+    my $obj     = $type . reverse( pack( "d", $date ) );
+    return $self->binary_write($obj);
+}
+
+sub write_null {
+    my $self = shift;
+    return $self->write_misc( 0, @_ );
+}
+
+sub write_false {
+    my $self = shift;
+    return $self->write_misc( 8, @_ );
+}
+
+sub write_true {
+    my $self = shift;
+    return $self->write_misc( 9, @_ );
+}
+
+sub write_fill {
+    my $self = shift;
+    return $self->write_misc( 15, @_ );
+}
+
+sub write_misc {
+    my $self = shift;
+    my ( $type, $misc ) = @_;
+    my $obj = $self->make_type( "0", $type );
+    return $self->binary_write($obj);
 }
 
 sub count {
+    my $self       = shift;
     my ($arrayref) = @_;
-    my $type = $arrayref->[0];
+    my $type       = $arrayref->[0];
+    my $value;
     if ( $type eq "dict" ) {
-        my @keys  = keys $arrayref->[1];
-        my $value = 1 + @keys;
+        my @keys = ( keys %{ $arrayref->[1] } );
+        $value = 1 + @keys;
         $value += $_ for map { $self->count( $arrayref->[1]->{$_} ) } @keys;
         return $value;
     }
-    elsif {
-        my $value = 1;
+    elsif ( $type eq "array" ) {
+        $value = 1;
         $value += $_ for map { $self->count($_) } @$arrayref;
         return $value;
     }
     else {
         return 1;
     }
+}
+
+sub binary_write{
+    my $self = shift;
+    my ($obj) = @_;
+    my $current = tell $self->{fh};
+    print $self->{fh}, $obj;
+    push @{ $self->{index} }, $current;
+    return ( @{ $self->{index} } - 1 );
+}
+
+sub int_length{
+    my $self = shift;
+    my ($int) = @_;
+    if ( $int > 65535 ) {
+        return 4;
+    }
+    elsif ( $int > 255 ) {
+	return 2;
+    }
+    else {
+	return 1;
+    }
+}
+
+sub pack_in {
+    my $self = shift;
+    my ($bytes) = @_;
+    my $fmt = ["C", "n", "N", "N"]->[$bytes-1];
+    if ($bytes == 3) {
+	die "Cannot encode 3 byte integers";
+    }
+    return $fmt;
 }
 
 1;
