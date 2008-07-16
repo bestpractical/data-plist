@@ -1,4 +1,4 @@
-use Test::More tests => 40;
+use Test::More tests => 44;
 
 use strict;
 use warnings;
@@ -23,8 +23,18 @@ $ret = eval {$read->open_string("bplist00")};
 ok( not($ret), "No trailer doesn't load" );
 like( "$@", qr/trailer/i, "Threw an error" );
 
-# Trailer overlaps with header
-$ret = eval {$read->open_string("bplist00" . ("!"x (32 - 8)))};
+# Trailer overlaps with header; file is < 32 bytes long
+$ret = eval {$read->open_string("bplist00" . ("!"x 20))};
+ok( not($ret), "Trailer too short doesn't load" );
+like( "$@", qr/trailer/i, "Threw an error" );
+
+# Trailer overlaps with header; file is 32 bytes long
+$ret = eval {$read->open_string("bplist00" . ("!"x 24))};
+ok( not($ret), "Trailer too short doesn't load" );
+like( "$@", qr/trailer/i, "Threw an error" );
+
+# Slightly less overlap, but still some
+$ret = eval {$read->open_string("bplist00" . ("!"x 28))};
 ok( not($ret), "Trailer too short doesn't load" );
 like( "$@", qr/trailer/i, "Threw an error" );
 

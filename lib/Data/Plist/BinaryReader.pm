@@ -208,6 +208,23 @@ sub binary_read {
     return $self->$method($size);
 }
 
+sub open_string {
+    my $self = shift;
+    my ($str) = @_;
+
+    # Seeking in in-memory filehandles can cause perl 5.8.8 to explode
+    # with "Out of memory" or "panic: memory wrap"; Do some
+    # error-proofing here.
+    die "Not a binary plist file\n"
+      unless length $str >= 8 and substr($str, 0, 8) eq "bplist00";
+    die "Read of plist trailer failed\n"
+      unless length $str >= 40;
+    die "Invalid top object identifier\n"
+      unless length $str > 40;
+
+    return $self->SUPER::open_string($str);
+}
+
 sub open_fh {
     my $self = shift;
     $self = $self->new() unless ref $self;
