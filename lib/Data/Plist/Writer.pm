@@ -68,6 +68,8 @@ sub serialize_value {
             return [ dict => \%hash ];
         } elsif ($value->isa("Foundation::NSObject")) {
             return $value->serialize;
+        } elsif ($value->isa("DateTime")) {
+            return [ date => $value->epoch - 978307200 + $value->nanosecond / 1e9 ];
         } else {
             die "Can't serialize unknown ref @{[ref $value]}\n";
         }
