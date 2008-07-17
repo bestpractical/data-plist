@@ -58,7 +58,10 @@ round_trip(3.14159, 50);
 round_trip(-1.985, 50);
 
 # Date
-round_trip(DateTime->new(year => 2001, month => 1, day => 17), 50);
+round_trip(DateTime->new(year => 2008, month => 7, day => 23), 50);
+
+# Caching
+round_trip({'kitteh' => 'Angleton', 'Laundry' => 'Angleton'}, 73);
 
 sub round_trip {
     my ( $input, $expected_size ) = @_;

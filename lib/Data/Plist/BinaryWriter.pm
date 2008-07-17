@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use YAML;
 use Math::BigInt;
+use Digest::MD5;
 
 use base qw/Data::Plist::Writer/;
 
@@ -17,6 +18,7 @@ sub write_fh {
     $self->{fh}    = $fh;
     $self->{index} = [];
     $self->{size}  = $self->count($object);
+    $self->{objcache}= {};
     if ( $self->{size} >= 2**8 ) {
         $self->{refsize} = 2;
     }
@@ -43,8 +45,11 @@ sub dispatch {
     my ($arrayref) = @_;
     my $type       = $arrayref->[0];
     my $method     = "write_" . $type;
+    my $digest     = Digest::MD5::md5_hex( YAML::Dump( $arrayref->[1] ) );
     die "Can't $method" unless $self->can($method);
-    return $self->$method( $arrayref->[1] );
+    $self->{objcache}{$digest} = $self->$method( $arrayref->[1] )
+      unless ( exists $self->{objcache}{$digest} );
+    return $self->{objcache}{$digest};
 }
 
 sub make_type {
