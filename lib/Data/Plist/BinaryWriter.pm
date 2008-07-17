@@ -13,7 +13,7 @@ sub write_fh {
     $self = $self->new() unless ref $self;
 
     my ( $fh, $object ) = @_;
-    $object = $self->serialize($object);
+    $object = $self->serialize($object) if ($self->{serialize});
     binmode $fh;
     $self->{fh}    = $fh;
     $self->{index} = [];
@@ -33,7 +33,7 @@ sub write_fh {
         print $fh ( pack $self->pack_in($offset_size), $_ );
     }
     print $fh ( pack "x6CC", ( $offset_size + 1 ), $self->{refsize} );
-    print $fh ( pack "x4N", $self->{size} );
+    print $fh ( pack "x4N", scalar keys %{$self->{objcache}} );
     print $fh ( pack "x4N", $top_index );
     print $fh ( pack "x4N", $table_offset );
     close $fh;
@@ -151,10 +151,10 @@ sub write_array {
     return ( @{ $self->{index} } - 1 );
 }
 
-sub write_uid {
+sub write_UID {
     my $self = shift;
     my ($id) = @_;
-    return $self->write_int( $id, "8" );
+    return $self->write_integer( $id, "8" );
 }
 
 sub write_real {
@@ -201,6 +201,7 @@ sub write_misc {
 }
 
 sub count {
+    # this might be slightly over, since it doesn't take into account duplicates
     my $self       = shift;
     my ($arrayref) = @_;
     my $type       = $arrayref->[0];
@@ -259,11 +260,11 @@ sub int_length {
 
 sub pack_in {
     my $self = shift;
-    my ($bytes) = @_;
-    if ( $bytes == 3 ) {
-        die "Cannot encode 3 byte integers";
+    my ($power ) = @_;
+    if ( $power == 4 ) {
+        die "Cannot encode 2**4 byte integers";
     }
-    my $fmt = [ "C", "n", "N" ]->[$bytes];
+    my $fmt = [ "C", "n", "N", "N" ]->[$power];
     return $fmt;
 }
 

@@ -21,7 +21,8 @@ sub write_fh {
         "http://www.apple.com/DTDs/PropertyList-1.0.dtd"
     );
     $self->{x}->startTag( plist => version => "1.0" );
-    $self->xml_write( $self->serialize($object) );
+    $object = $self->serialize($object) if ($self->{serialize});
+    $self->xml_write( $object );
     $self->{x}->endTag("plist");
     $self->{x}->end();
 

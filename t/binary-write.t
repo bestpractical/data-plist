@@ -1,4 +1,4 @@
-use Test::More no_plan => 1;
+use Test::More tests => 160;
 
 use strict;
 use warnings;
@@ -10,12 +10,6 @@ use Data::Plist::BinaryReader;
 
 my $in;
 my $out;
-
-# Create the object
-my $write = Data::Plist::BinaryWriter->new;
-my $read  = Data::Plist::BinaryReader->new;
-ok( $write, "Created a binary writer" );
-isa_ok( $write, "Data::Plist::BinaryWriter" );
 
 # Empty dict
 round_trip( {}, 42 );
@@ -63,7 +57,20 @@ round_trip(DateTime->new(year => 2008, month => 7, day => 23), 50);
 # Caching
 round_trip({'kitteh' => 'Angleton', 'Laundry' => 'Angleton'}, 73);
 
+# UIDs
+preserialized_trip( [  UID => 1 ], 43 );
+
+# Miscs
+preserialized_trip([ false => 0 ], 42);
+preserialized_trip([ true => 1 ], 42);
+preserialized_trip([ fill => 15 ], 44);
+preserialized_trip([ null => 0 ], 42);
+
 sub round_trip {
+    my $write = Data::Plist::BinaryWriter->new;
+    my $read  = Data::Plist::BinaryReader->new;
+    ok( $write, "Created a binary writer" );
+    isa_ok( $write, "Data::Plist::BinaryWriter" );
     my ( $input, $expected_size ) = @_;
     $out = $write->write($input);
     ok( $out, "Created data structure" );
@@ -71,8 +78,24 @@ sub round_trip {
     is( length($out), $expected_size,
         "Bplist is " . $expected_size . " bytes long." );
     $in = eval { $read->open_string($out) };
-    is_deeply( $@, '' );
     ok( $in, "Read back bplist" );
     isa_ok( $in, "Data::Plist" );
     is_deeply( $in->data, $input, "Read back " . $input );
+}
+
+sub preserialized_trip {
+    my $write = Data::Plist::BinaryWriter->new(serialize => 0);
+    my $read  = Data::Plist::BinaryReader->new;
+    ok( $write, "Created a binary writer" );
+    isa_ok( $write, "Data::Plist::BinaryWriter" );
+    my ( $input, $expected_size ) = @_;
+    $out = $write->write($input);
+    ok( $out, "Created data structure" );
+    like( $out, qr/^bplist00/, "Bplist begins with correct header" );
+    is( length($out), $expected_size,
+        "Bplist is " . $expected_size . " bytes long." );
+    $in = eval { $read->open_string($out) };
+    ok( $in, "Read back bplist" );
+    isa_ok( $in, "Data::Plist" );
+    is_deeply( $in->raw_data, $input, "Read back " . $input );
 }

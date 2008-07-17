@@ -6,7 +6,8 @@ use Scalar::Util;
 
 sub new {
     my $class = shift;
-    return bless {} => $class;
+    my %args = (serialize => 1, @_);
+    return bless \%args => $class;
 }
 
 sub write {
