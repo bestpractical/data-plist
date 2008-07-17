@@ -32,7 +32,7 @@ sub collapse {
     } elsif ($data->[0] eq "string") {
         return $data->[1] eq '$null' ? undef : $data->[1];
     } elsif ($data->[0] eq "date") {
-        return DateTime->new( epoch => $data->[1] + 978307200);
+        return DateTime->from_epoch( epoch => $data->[1] + 978307200);
     } elsif ($data->[0] eq "UID" and ref $data->[1]) {
         return $self->collapse($data->[1]);
     } else {

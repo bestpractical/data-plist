@@ -2,6 +2,8 @@ package Data::Plist::BinaryWriter;
 
 use strict;
 use warnings;
+use YAML;
+use Math::BigInt;
 
 use base qw/Data::Plist::Writer/;
 
@@ -10,6 +12,7 @@ sub write_fh {
     $self = $self->new() unless ref $self;
 
     my ( $fh, $object ) = @_;
+    $object = $self->serialize($object);
     binmode $fh;
     $self->{fh}    = $fh;
     $self->{index} = [];
@@ -21,19 +24,13 @@ sub write_fh {
         $self->{refsize} = 1;
     }
     print $fh "bplist00";
-    my $top_index   = $self->dispatch($object);
-    my $offset_size = 1;
-    if ( $self->{index}->[-1] > 65535 ) {
-        $offset_size = 4;
-    }
-    elsif ( $self->{index}->[-1] > 255 ) {
-        $offset_size = 2;
-    }
+    my $top_index    = $self->dispatch($object);
+    my $offset_size  = $self->int_length( $self->{index}->[-1] );
     my $table_offset = tell $fh;
-    for (@$self->{index}){
-	print $fh (pack ($self->pack_in($offset_size)), $_);
+    for ( @{ $self->{index} } ) {
+        print $fh ( pack $self->pack_in($offset_size), $_ );
     }
-    print $fh ( pack "x6CC", $offset_size, $self->{refsize} );
+    print $fh ( pack "x6CC", ( $offset_size + 1 ), $self->{refsize} );
     print $fh ( pack "x4N", $self->{size} );
     print $fh ( pack "x4N", $top_index );
     print $fh ( pack "x4N", $table_offset );
@@ -52,44 +49,60 @@ sub dispatch {
 
 sub make_type {
     my $self = shift;
-    my ( $typ, $len ) = @_;
+    my ( $type, $len ) = @_;
     my $ans = "";
 
     my $optint = "";
 
     if ( $len < 15 ) {
-        $typ .= sprintf( "%x", $len );
+        $type .= sprintf( "%x", $len );
     }
     else {
-        $typ .= "f";
-	my $optlen = $self->int_length($len);
-	$optint = pack( "C" . $self->pack_in($optlen), hex("1" . $optlen), $len)
+        $type .= "f";
+        my $optlen = $self->int_length($len);
+        $optint =
+          pack( "C" . $self->pack_in($optlen), hex( "1" . $optlen ), $len );
     }
-    $ans = pack( "H*", $typ ) . $optint;
+    $ans = pack( "H*", $type ) . $optint;
 
     return $ans;
 }
 
-sub write_int {
+sub write_integer {
     my $self = shift;
     my ( $int, $type ) = @_;
     my $fmt;
+    my $obj;
 
     unless ( defined $type ) {
         $type = "1";
     }
     my $len = $self->int_length($int);
-    $fmt = $self->pack_in($len);
-    my $obj = "\x" . $type . $len . pack($fmt, $int);
+
+    if ( $len == 3 ) {
+        if ( $int < 0 ) {
+            $int += Math::BigInt->new(2)->bpow(64);
+        }
+        my $hw = Math::BigInt->new($int);
+        $hw->brsft(32);
+        my $lw = Math::BigInt->new($int);
+        $lw->band( Math::BigInt->new("4294967295") );
+
+        $obj =
+          $self->make_type( $type, $len ) . pack( "N", $hw ) . pack( "N", $lw );
+    }
+    else {
+        $fmt = $self->pack_in($len);
+        $obj = pack( "C" . $fmt, hex( $type . $len ), $int );
+    }
     return $self->binary_write($obj);
 }
 
 sub write_string {
-    my $self = shift;
+    my $self     = shift;
     my ($string) = @_;
-
-    my $type = $self->make_type( "5", length($string) );
-    my $obj = $type . pack( "U", $string );
+    my $type     = $self->make_type( "5", length($string) );
+    my $obj      = $type . $string;
     return $self->binary_write($obj);
 }
 
@@ -99,7 +112,8 @@ sub write_ustring {
 }
 
 sub write_dict {
-    my $self = shift;
+    my $self   = shift;
+    my $fh     = $self->{fh};
     my ($hash) = @_;
     my @keys;
     my @values;
@@ -108,15 +122,16 @@ sub write_dict {
         push @values, $self->dispatch( $hash->{$key} );
     }
     my $current = tell $self->{fh};
-    print $self->{fh}, $self->make_type( "d", scalar keys(%$hash) );
-    my $packvar = $self->pack_in($self->{refsize});
-    print $self->{fh}, pack $packvar, $_ for @keys, @values;
+    print $fh $self->make_type( "d", scalar keys(%$hash) );
+    my $packvar = $self->pack_in( $self->{refsize} - 1 );
+    print $fh pack $packvar, $_ for @keys, @values;
     push @{ $self->{index} }, $current;
     return ( @{ $self->{index} } - 1 );
 }
 
 sub write_array {
     my $self    = shift;
+    my $fh      = $self->{fh};
     my ($array) = @_;
     my $size    = @$array;
     my @values;
@@ -124,32 +139,32 @@ sub write_array {
         push @values, $self->dispatch($_);
     }
     my $current = tell $self->{fh};
-    print $self->{fh}, $self->make_type( "a", $size );
-    my $packvar = $self->pack_in($self->{refsize});
-    print $self->{fh}, pack $packvar, $_ for @values;
+    print $fh $self->make_type( "a", $size );
+    my $packvar = $self->pack_in( $self->{refsize} - 1 );
+    print $fh pack $packvar, $_ for @values;
     push @{ $self->{index} }, $current;
     return ( @{ $self->{index} } - 1 );
 }
 
 sub write_uid {
-    my $self    = shift;
-    my ($id)    = @_;
+    my $self = shift;
+    my ($id) = @_;
     return $self->write_int( $id, "8" );
 }
 
 sub write_real {
     my $self    = shift;
     my ($float) = @_;
-    my $type    = $self->make_type( "2", 4 );
+    my $type    = $self->make_type( "2", 3 );
     my $obj     = $type . reverse( pack( "d", $float ) );
     return $self->binary_write($obj);
 }
 
 sub write_date {
-    my $self    = shift;
-    my ($date)  = @_;
-    my $type    = $self->make_type( "3", 4 );
-    my $obj     = $type . reverse( pack( "d", $date ) );
+    my $self   = shift;
+    my ($date) = @_;
+    my $type   = $self->make_type( "3", 3 );
+    my $obj    = $type . reverse( pack( "d", $date ) );
     return $self->binary_write($obj);
 }
 
@@ -193,7 +208,7 @@ sub count {
     }
     elsif ( $type eq "array" ) {
         $value = 1;
-        $value += $_ for map { $self->count($_) } @$arrayref;
+        $value += $_ for map { $self->count($_) } @{ $arrayref->[1] };
         return $value;
     }
     else {
@@ -201,36 +216,49 @@ sub count {
     }
 }
 
-sub binary_write{
-    my $self = shift;
-    my ($obj) = @_;
+sub binary_write {
+    my $self    = shift;
+    my $fh      = $self->{fh};
+    my ($obj)   = @_;
     my $current = tell $self->{fh};
-    print $self->{fh}, $obj;
+    print $fh $obj;
     push @{ $self->{index} }, $current;
     return ( @{ $self->{index} } - 1 );
 }
 
-sub int_length{
+sub int_length {
     my $self = shift;
     my ($int) = @_;
-    if ( $int > 65535 ) {
-        return 4;
+    if ( $int > 4294967295 ) {
+        return 3;
+
+        # actually refers to 2^3 bytes
+    }
+    elsif ( $int > 65535 ) {
+        return 2;
+
+        # actually refers to 2^2 bytes
     }
     elsif ( $int > 255 ) {
-	return 2;
+        return 1;
+
+        # I'm sure you see the trend
+    }
+    elsif ( $int < 0 ) {
+        return 3;
     }
     else {
-	return 1;
+        return 0;
     }
 }
 
 sub pack_in {
     my $self = shift;
     my ($bytes) = @_;
-    my $fmt = ["C", "n", "N", "N"]->[$bytes-1];
-    if ($bytes == 3) {
-	die "Cannot encode 3 byte integers";
+    if ( $bytes == 3 ) {
+        die "Cannot encode 3 byte integers";
     }
+    my $fmt = [ "C", "n", "N" ]->[$bytes];
     return $fmt;
 }
 

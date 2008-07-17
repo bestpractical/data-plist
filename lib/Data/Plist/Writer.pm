@@ -2,6 +2,7 @@ package Data::Plist::Writer;
 
 use strict;
 use warnings;
+use Scalar::Util;
 
 sub new {
     my $class = shift;
@@ -14,7 +15,7 @@ sub write {
     my $to = shift;
 
     if (not $to) {
-        my $content;
+        my $content = '';
         my $fh;
         open( $fh, ">", \$content );
         $self->write_fh($fh, $object) or return;
@@ -73,7 +74,7 @@ sub serialize_value {
         } else {
             die "Can't serialize unknown ref @{[ref $value]}\n";
         }
-    } elsif ( $value !~ /\D/ ) {
+    } elsif ( $value =~ /^-?\d+$/ ) {
         return [ integer => $value ];
     } elsif ( Scalar::Util::looks_like_number($value) ) {
         return [ real => $value ];
@@ -91,7 +92,7 @@ sub serialize {
     my $object = shift;
 
     return $self->serialize_value($object)
-      if ref($object) =~ /ARRAY|HASH/ or not $object->can("serialize");
+      if not ref($object) or ref($object) =~ /ARRAY|HASH/ or not $object->can("serialize");
 
     $object = $object->serialize;
 
