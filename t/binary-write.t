@@ -1,12 +1,10 @@
-use Test::More tests => 160;
+use Test::More tests => 180;
 
 use strict;
 use warnings;
 
 use Data::Plist::BinaryWriter;
 use Data::Plist::BinaryReader;
-
-
 
 my $in;
 my $out;
@@ -46,56 +44,51 @@ round_trip( "kitteh", 48 );
 round_trip( "The kyokeach is cute", 64 );
 
 # Real number
-round_trip(3.14159, 50);
+round_trip( 3.14159, 50 );
 
 # Negative real
-round_trip(-1.985, 50);
+round_trip( -1.985, 50 );
 
 # Date
-round_trip(DateTime->new(year => 2008, month => 7, day => 23), 50);
+round_trip( DateTime->new( year => 2008, month => 7, day => 23 ), 50 );
 
 # Caching
-round_trip({'kitteh' => 'Angleton', 'Laundry' => 'Angleton'}, 73);
+round_trip( { 'kitteh' => 'Angleton', 'Laundry' => 'Angleton' }, 73 );
 
 # UIDs
-preserialized_trip( [  UID => 1 ], 43 );
+preserialized_trip( [ UID => 1 ], 43 );
 
 # Miscs
-preserialized_trip([ false => 0 ], 42);
-preserialized_trip([ true => 1 ], 42);
-preserialized_trip([ fill => 15 ], 44);
-preserialized_trip([ null => 0 ], 42);
+preserialized_trip( [ false => 0 ],  42 );
+preserialized_trip( [ true  => 1 ],  42 );
+preserialized_trip( [ fill  => 15 ], 44 );
+preserialized_trip( [ null  => 0 ],  42 );
 
 sub round_trip {
     my $write = Data::Plist::BinaryWriter->new;
-    my $read  = Data::Plist::BinaryReader->new;
-    ok( $write, "Created a binary writer" );
-    isa_ok( $write, "Data::Plist::BinaryWriter" );
-    my ( $input, $expected_size ) = @_;
-    $out = $write->write($input);
-    ok( $out, "Created data structure" );
-    like( $out, qr/^bplist00/, "Bplist begins with correct header" );
-    is( length($out), $expected_size,
-        "Bplist is " . $expected_size . " bytes long." );
-    $in = eval { $read->open_string($out) };
-    ok( $in, "Read back bplist" );
-    isa_ok( $in, "Data::Plist" );
-    is_deeply( $in->data, $input, "Read back " . $input );
+    $in = trip($write, @_);
+    is_deeply( $in->data, $_[0], "Read back " . $_[0] );
 }
 
 sub preserialized_trip {
-    my $write = Data::Plist::BinaryWriter->new(serialize => 0);
-    my $read  = Data::Plist::BinaryReader->new;
+    my $write = Data::Plist::BinaryWriter->new( serialize => 0 );
+    $in = trip($write, @_);
+    is_deeply( $in->raw_data, $_[0], "Read back " . $_[0] );
+}
+
+sub trip {
+    my $read = Data::Plist::BinaryReader->new;
+    my ( $write, $input, $expected_size ) = @_;
     ok( $write, "Created a binary writer" );
     isa_ok( $write, "Data::Plist::BinaryWriter" );
-    my ( $input, $expected_size ) = @_;
     $out = $write->write($input);
     ok( $out, "Created data structure" );
     like( $out, qr/^bplist00/, "Bplist begins with correct header" );
+    is_deeply( $@, '', "No errors thrown." );
     is( length($out), $expected_size,
         "Bplist is " . $expected_size . " bytes long." );
     $in = eval { $read->open_string($out) };
     ok( $in, "Read back bplist" );
     isa_ok( $in, "Data::Plist" );
-    is_deeply( $in->raw_data, $input, "Read back " . $input );
+    return $in;
 }
