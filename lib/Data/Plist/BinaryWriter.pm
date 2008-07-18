@@ -200,6 +200,15 @@ sub write_misc {
     return $self->binary_write($obj);
 }
 
+sub write_data {
+    my $self = shift;
+    my ($data) = @_;
+    use bytes;
+    my $len = length $data;
+    my $obj = $self->make_type(4, $len) . $data;
+    return $self->binary_write($obj);
+}
+
 sub count {
     # this might be slightly over, since it doesn't take into account duplicates
     my $self       = shift;
