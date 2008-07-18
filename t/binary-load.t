@@ -1,15 +1,22 @@
-use Test::More tests => 44;
+use Test::More no_plan => 1;
 
 use strict;
 use warnings;
 
 use Data::Plist::BinaryReader;
+use Data::Plist::BinaryWriter;
+
 my $ret;
 
 # Create the object
 my $read = Data::Plist::BinaryReader->new;
 ok( $read, "Created a binary reader" );
 isa_ok( $read, "Data::Plist::BinaryReader" );
+
+# Create writer
+my $write = Data::Plist::BinaryWriter->new;
+ok( $write, "Created a binary writer" );
+isa_ok( $write, "Data::Plist::BinaryWriter" );
 
 ### Basic plist munging
 
@@ -134,3 +141,10 @@ is_deeply(
     ],
     "Raw structure matches",
 );
+
+# Data contains bplist
+my $bplist = $write->write({});
+my $in = $write->write({"test" => $bplist});
+ok ($in, "Binary data written.");
+$ret = $read->open_string($in);
+ok ($ret, "Opening from string worked");

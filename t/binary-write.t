@@ -1,4 +1,4 @@
-use Test::More tests => 180;
+use Test::More no_plan => 1;
 
 use strict;
 use warnings;
@@ -63,6 +63,9 @@ preserialized_trip( [ false => 0 ],  42 );
 preserialized_trip( [ true  => 1 ],  42 );
 preserialized_trip( [ fill  => 15 ], 44 );
 preserialized_trip( [ null  => 0 ],  42 );
+
+# Data
+preserialized_trip ( [ data => "\x00"], 43);
 
 sub round_trip {
     my $write = Data::Plist::BinaryWriter->new;
