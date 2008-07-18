@@ -79,9 +79,7 @@ sub serialize_value {
         return [ integer => $value ];
     } elsif ( Scalar::Util::looks_like_number($value) ) {
         return [ real => $value ];
-    } elsif ( $value =~ /\0/ or $value =~ /<\?xml/) {
-        # XXX TODO: The /<\?xml/ is a hack to get it labelled DATA
-        # until we use BinaryWriter to write nested plists
+    } elsif ( $value =~ /\0/) {
         return [ data => $value ];
     } else {
         return [ string => $value ];

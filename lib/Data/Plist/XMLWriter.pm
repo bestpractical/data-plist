@@ -33,7 +33,7 @@ sub xml_write {
     my $self = shift;
     my $data = shift;
 
-    if ( $data->[0] =~ /^(true|false)$/ ) {
+    if ( $data->[0] =~ /^(true|false|fill|null)$/ ) {
         $self->{x}->emptyTag( $data->[0] );
     } elsif ( $data->[0] =~ /^(integer|real|date|string|ustring)$/ ) {
         $self->{x}->dataElement( $data->[0], $data->[1] );

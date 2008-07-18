@@ -84,7 +84,7 @@ sub trip {
     $out = $write->write($input);
     ok( $out, "Created data structure" );
     like( $out, qr/^bplist00/, "Bplist begins with correct header" );
-    is_deeply( $@, '', "No errors thrown." );
+    is( "$@", '', "No errors thrown." );
     is( length($out), $expected_size,
         "Bplist is " . $expected_size . " bytes long." );
     $in = eval { $read->open_string($out) };
