@@ -1,4 +1,4 @@
-use Test::More no_plan => 1;
+use Test::More tests => 59;
 
 use strict;
 use warnings;
@@ -96,6 +96,27 @@ ok( $ret, "Two byte addresses work" );
 isa_ok( $ret, "Data::Plist" );
 is_deeply( $ret->raw_data => [ null => 0 ], "Has a null");
 
+### Trailer
+
+# Invalid offset sizes
+$ret = eval {$read->open_string("bplist00" . pack("Cnx6CC(x4N)3", 0,8,5,1,1,0,9))};
+ok( not ($ret), "Invalid offset");
+like ("$@", qr/invalid offset/i, "Threw an error");
+
+# Invalid refsize
+$ret = eval {$read->open_string("bplist00" . pack("Cnx6CC(x4N)3", 0,8,2,3,1,0,9))};
+ok( not ($ret), "Invalid refsize");
+like ("$@", qr/invalid reference/i, "Threw an error");
+
+# Invalid top object index
+$ret = eval {$read->open_string("bplist00" . pack("Cnx6CC(x4N)3", 0,8,2,1,1,1,9))};
+ok( not ($ret), "Invalid top object id");
+like ("$@", qr/invalid top/i, "Threw an error");
+
+# Invalid offset table address
+$ret = eval {$read->open_string("bplist00" . pack("Cnx6CC(x4N)3", 0,8,2,1,2,0,9))};
+ok( not ($ret), "Invalid offset table address");
+like ("$@", qr/invalid offset/i, "Threw an error");
 
 ### More complex testing
 
@@ -104,6 +125,12 @@ $ret = $read->open_file("t/data/basic.binary.plist");
 ok( $ret, "Got a value from open with a filename" );
 isa_ok( $ret, "Data::Plist" );
 ok( $ret->raw_data, "Has data inside" );
+
+# ustring
+$ret = $read->open_file("t/data/ustring.binary.plist");
+ok ($ret, "Got a value from open with a filename" );
+isa_ok($ret, "Data::Plist" );
+ok($ret->raw_data, "Has data inside" );
 
 # Load from fh
 my $fh;

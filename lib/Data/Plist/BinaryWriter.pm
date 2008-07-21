@@ -2,7 +2,7 @@ package Data::Plist::BinaryWriter;
 
 use strict;
 use warnings;
-use YAML;
+use Storable;
 use Math::BigInt;
 use Digest::MD5;
 
@@ -13,12 +13,12 @@ sub write_fh {
     $self = $self->new() unless ref $self;
 
     my ( $fh, $object ) = @_;
-    $object = $self->serialize($object) if ($self->{serialize});
+    $object = $self->serialize($object) if ( $self->{serialize} );
     binmode $fh;
-    $self->{fh}    = $fh;
-    $self->{index} = [];
-    $self->{size}  = $self->count($object);
-    $self->{objcache}= {};
+    $self->{fh}       = $fh;
+    $self->{index}    = [];
+    $self->{size}     = $self->count($object);
+    $self->{objcache} = {};
     if ( $self->{size} >= 2**8 ) {
         $self->{refsize} = 2;
     }
@@ -33,7 +33,7 @@ sub write_fh {
         print $fh ( pack $self->pack_in($offset_size), $_ );
     }
     print $fh ( pack "x6CC", ( $offset_size + 1 ), $self->{refsize} );
-    print $fh ( pack "x4N", scalar keys %{$self->{objcache}} );
+    print $fh ( pack "x4N", scalar keys %{ $self->{objcache} } );
     print $fh ( pack "x4N", $top_index );
     print $fh ( pack "x4N", $table_offset );
     close $fh;
@@ -45,7 +45,7 @@ sub dispatch {
     my ($arrayref) = @_;
     my $type       = $arrayref->[0];
     my $method     = "write_" . $type;
-    my $digest     = Digest::MD5::md5_hex( YAML::Dump( $arrayref->[1] ) );
+    my $digest = eval{Digest::MD5::md5_hex( Storable::freeze( $arrayref ) )};
     die "Can't $method" unless $self->can($method);
     $self->{objcache}{$digest} = $self->$method( $arrayref->[1] )
       unless ( exists $self->{objcache}{$digest} );
@@ -205,11 +205,12 @@ sub write_data {
     my ($data) = @_;
     use bytes;
     my $len = length $data;
-    my $obj = $self->make_type(4, $len) . $data;
+    my $obj = $self->make_type( 4, $len ) . $data;
     return $self->binary_write($obj);
 }
 
 sub count {
+
     # this might be slightly over, since it doesn't take into account duplicates
     my $self       = shift;
     my ($arrayref) = @_;
@@ -269,7 +270,7 @@ sub int_length {
 
 sub pack_in {
     my $self = shift;
-    my ($power ) = @_;
+    my ($power) = @_;
     if ( $power == 4 ) {
         die "Cannot encode 2**4 byte integers";
     }

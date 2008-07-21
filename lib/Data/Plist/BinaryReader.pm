@@ -264,7 +264,7 @@ sub open_fh {
         or $OffsetTableOffset > $end
         or $OffsetTableOffset + $NumObjects * $OffsetSize > $end )
     {
-        die "Invalid offset table address (overlap with header or footer:\n OTO: $OffsetTableOffset\n NO: $NumObjects\n OS: $OffsetSize\n e: $end)\n";
+        die "Invalid offset table address (overlap with header or footer.";
     }
 
     # get the offset table

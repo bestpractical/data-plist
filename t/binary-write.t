@@ -1,4 +1,4 @@
-use Test::More tests => 200;
+use Test::More tests => 204;
 
 use strict;
 use warnings;
@@ -14,7 +14,7 @@ round_trip( {}, 42 );
 
 # Dict containing stuff
 round_trip( { 'kitteh' => 'Angleton', 'MoL' => 42, 'array' => ['Cthulhu'] },
-    93 );
+     93 );
 
 # Empty array
 round_trip( [], 42 );
@@ -42,6 +42,17 @@ round_trip( "kitteh", 48 );
 
 # Long string (where long means "more than 15 characters")
 round_trip( "The kyokeach is cute", 64 );
+
+# Ustring
+my $writer = Data::Plist::BinaryWriter->new(serialize => 0);
+my $reader = Data::Plist::BinaryReader->new;
+my $ustring = eval{$reader->open_file("t/data/ustring.binary.plist")};
+ok ($ustring->raw_data, "Got data");
+$ustring = $ustring->raw_data;
+my $orig = $writer->write($ustring);
+ok ($orig, "Created data structure");
+like( $orig, qr/^bplist00/, "Bplist begins with correct header" );
+is( "$@", '', "No errors thrown." );
 
 # Real number
 round_trip( 3.14159, 50 );
@@ -74,7 +85,7 @@ round_trip([1..300], 1891);
 my $fail = Data::Plist::BinaryWriter->new( serialize => 0);
 my $ret = eval{$fail->write([ random => 0 ])};
 ok (not ($ret), "Binary plist didn't write.");
-like ($@, qr/Can't/i, "Threw an error.");
+like ($@, qr/can't/i, "Threw an error.");
 
 sub round_trip {
     my $write = Data::Plist::BinaryWriter->new;
