@@ -318,18 +318,4 @@ sub open_fh {
     return Data::Plist->new( data => $top );
 }
 
-sub convert_int {
-    my $self = shift;
-    my ($int) = @_;
-    if ( $int == 8 ) {
-        return 4;
-    }
-    elsif ( $int == 4 ) {
-        return 3;
-    }
-    else {
-        return $int;
-    }
-}
-
 1;
