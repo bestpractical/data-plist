@@ -49,7 +49,7 @@ sub xml_write {
             MIME::Base64::encode_base64( $data->[1] ) );
     } elsif ( $data->[0] eq "dict" ) {
         $self->{x}->startTag("dict");
-        for my $k ( keys %{ $data->[1] } ) {
+        for my $k ( sort keys %{ $data->[1] } ) {
             $self->{x}->dataElement( "key", $k );
             $self->xml_write( $data->[1]{$k} );
         }
