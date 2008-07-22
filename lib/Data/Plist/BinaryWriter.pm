@@ -27,12 +27,16 @@ sub write_fh {
     }
     print $fh "bplist00";
     my $top_index    = $self->dispatch($object);
-    my $offset_size  = $self->int_length( $self->{index}->[-1] );
+    my $offset_size  = $self->bytes( $self->{index}->[-1] );
     my $table_offset = tell $fh;
     for ( @{ $self->{index} } ) {
-        print $fh ( pack $self->pack_in($offset_size), $_ );
+        my $value = pack $self->pack_in( $offset_size - 1 ), $_;
+        if ( $offset_size == 3 ) {
+            $value = substr $value, -3;
+        }
+        print $fh $value;
     }
-    print $fh ( pack "x6CC", ( $offset_size + 1 ), $self->{refsize} );
+    print $fh ( pack "x6CC", ($offset_size), $self->{refsize} );
     print $fh ( pack "x4N", scalar keys %{ $self->{objcache} } );
     print $fh ( pack "x4N", $top_index );
     print $fh ( pack "x4N", $table_offset );
@@ -45,7 +49,7 @@ sub dispatch {
     my ($arrayref) = @_;
     my $type       = $arrayref->[0];
     my $method     = "write_" . $type;
-    my $digest = eval{Digest::MD5::md5_hex( Storable::freeze( $arrayref ) )};
+    my $digest = eval { Digest::MD5::md5_hex( Storable::freeze($arrayref) ) };
     die "Can't $method" unless $self->can($method);
     $self->{objcache}{$digest} = $self->$method( $arrayref->[1] )
       unless ( exists $self->{objcache}{$digest} );
@@ -58,13 +62,12 @@ sub make_type {
     my $ans = "";
 
     my $optint = "";
-
     if ( $len < 15 ) {
         $type .= sprintf( "%x", $len );
     }
     else {
         $type .= "f";
-        my $optlen = $self->int_length($len);
+        my $optlen = $self->power($len);
         $optint =
           pack( "C" . $self->pack_in($optlen), hex( "1" . $optlen ), $len );
     }
@@ -82,7 +85,7 @@ sub write_integer {
     unless ( defined $type ) {
         $type = "1";
     }
-    my $len = $self->int_length($int);
+    my $len = $self->power($int);
 
     if ( $len == 3 ) {
         if ( $int < 0 ) {
@@ -242,7 +245,7 @@ sub binary_write {
     return ( @{ $self->{index} } - 1 );
 }
 
-sub int_length {
+sub power {
     my $self = shift;
     my ($int) = @_;
     if ( $int > 4294967295 ) {
@@ -268,13 +271,35 @@ sub int_length {
     }
 }
 
-sub pack_in {
+sub bytes {
     my $self = shift;
-    my ($power) = @_;
-    if ( $power == 4 ) {
-        die "Cannot encode 2**4 byte integers";
+    my ($int) = @_;
+    if ( $int > 2**24 ) {
+        return 4;
+
+        # actually refers to 4 bytes
     }
-    my $fmt = [ "C", "n", "N", "N" ]->[$power];
+    elsif ( $int > 2**16 ) {
+        return 3;
+
+        # actually refers to 3 bytes
+    }
+    elsif ( $int > 255 ) {
+        return 2;
+
+        # I'm sure you see the trend
+    }
+    else {
+        return 1;
+    }
+}
+
+sub pack_in {
+
+    # can be used with powers or bytes
+    my $self  = shift;
+    my ($int) = @_;
+    my $fmt   = [ "C", "n", "N", "N" ]->[$int];
     return $fmt;
 }
 

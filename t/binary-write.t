@@ -1,4 +1,4 @@
-use Test::More tests => 204;
+use Test::More tests => 223;
 
 use strict;
 use warnings;
@@ -14,7 +14,7 @@ round_trip( {}, 42 );
 
 # Dict containing stuff
 round_trip( { 'kitteh' => 'Angleton', 'MoL' => 42, 'array' => ['Cthulhu'] },
-     93 );
+    93 );
 
 # Empty array
 round_trip( [], 42 );
@@ -44,15 +44,7 @@ round_trip( "kitteh", 48 );
 round_trip( "The kyokeach is cute", 64 );
 
 # Ustring
-my $writer = Data::Plist::BinaryWriter->new(serialize => 0);
-my $reader = Data::Plist::BinaryReader->new;
-my $ustring = eval{$reader->open_file("t/data/ustring.binary.plist")};
-ok ($ustring->raw_data, "Got data");
-$ustring = $ustring->raw_data;
-my $orig = $writer->write($ustring);
-ok ($orig, "Created data structure");
-like( $orig, qr/^bplist00/, "Bplist begins with correct header" );
-is( "$@", '', "No errors thrown." );
+files("t/data/ustring.binary.plist");
 
 # Real number
 round_trip( 3.14159, 50 );
@@ -66,6 +58,9 @@ round_trip( DateTime->new( year => 2008, month => 7, day => 23 ), 50 );
 # Caching
 round_trip( { 'kitteh' => 'Angleton', 'Laundry' => 'Angleton' }, 73 );
 
+# refsize = 2
+round_trip( [ 1 .. 300 ], 1891 );
+
 # UIDs
 preserialized_trip( [ UID => 1 ], 43 );
 
@@ -76,26 +71,47 @@ preserialized_trip( [ fill  => 15 ], 44 );
 preserialized_trip( [ null  => 0 ],  42 );
 
 # Data
-preserialized_trip ( [ data => "\x00"], 43);
+preserialized_trip( [ data => "\x00" ], 43 );
 
-# refsize = 2
-round_trip([1..300], 1891);
+# OffsetSize == 3
+preserialized_trip( [ array => [ [ data => "\x00" x 65536 ] ] ], 65590 );
 
 # Fails thanks to unknown data type
-my $fail = Data::Plist::BinaryWriter->new( serialize => 0);
-my $ret = eval{$fail->write([ random => 0 ])};
-ok (not ($ret), "Binary plist didn't write.");
-like ($@, qr/can't/i, "Threw an error.");
+my $fail = Data::Plist::BinaryWriter->new( serialize => 0 );
+my $ret = eval { $fail->write( [ random => 0 ] ) };
+ok( not($ret), "Binary plist didn't write." );
+like( $@, qr/can't/i, "Threw an error." );
+
+# Large files
+files("examples/bigfiles/bigfile-00.binary.plist");
+
+sub files {
+    my $write      = Data::Plist::BinaryWriter->new( serialize => 0 );
+    my $read       = Data::Plist::BinaryReader->new;
+    my ($filename) = @_;
+    my $str        = do { local @ARGV = $filename; local $/; <> };
+    my $output;
+    ok( $str, "Read binary data in by hand" );
+    $output = eval { $read->open_string($str) };
+    ok( $output, "Opening from a string worked" );
+    isa_ok( $output, "Data::Plist" );
+    $output = $output->raw_data;
+    ok( $output, "Has data inside" );
+    my $orig = $write->write($output);
+    ok( $orig, "Created data structure" );
+    like( $orig, qr/^bplist00/, "Bplist begins with correct header" );
+    is( "$@", '', "No errors thrown." );
+}
 
 sub round_trip {
     my $write = Data::Plist::BinaryWriter->new;
-    $in = trip($write, @_);
+    $in = trip( $write, @_ );
     is_deeply( $in->data, $_[0], "Read back " . $_[0] );
 }
 
 sub preserialized_trip {
     my $write = Data::Plist::BinaryWriter->new( serialize => 0 );
-    $in = trip($write, @_);
+    $in = trip( $write, @_ );
     is_deeply( $in->raw_data, $_[0], "Read back " . $_[0] );
 }
 
@@ -104,7 +120,7 @@ sub trip {
     my ( $write, $input, $expected_size ) = @_;
     ok( $write, "Created a binary writer" );
     isa_ok( $write, "Data::Plist::BinaryWriter" );
-    $out = $write->write($input);
+    $out = eval { $write->write($input) };
     ok( $out, "Created data structure" );
     like( $out, qr/^bplist00/, "Bplist begins with correct header" );
     is( "$@", '', "No errors thrown." );
