@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use base qw/Foundation::NSData/;
+use Data::Plist::BinaryWriter;
 
 sub data {
     my $self = shift;
