@@ -17,4 +17,3 @@ sub serialize {
 
 1;
 
-

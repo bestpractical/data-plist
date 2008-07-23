@@ -14,15 +14,15 @@ sub write_fh {
     my ( $fh, $object ) = @_;
     local $self->{x}
         = XML::Writer->new( OUTPUT => $fh, DATA_MODE => 1, DATA_INDENT => 8 );
-    $self->{x}->xmlDecl( "UTF-8" );
+    $self->{x}->xmlDecl("UTF-8");
     $self->{x}->doctype(
         "plist",
         "-//Apple//DTD PLIST 1.0//EN",
         "http://www.apple.com/DTDs/PropertyList-1.0.dtd"
     );
     $self->{x}->startTag( plist => version => "1.0" );
-    $object = $self->serialize($object) if ($self->{serialize});
-    $self->xml_write( $object );
+    $object = $self->serialize($object) if ( $self->{serialize} );
+    $self->xml_write($object);
     $self->{x}->endTag("plist");
     $self->{x}->end();
 
@@ -38,6 +38,7 @@ sub xml_write {
     } elsif ( $data->[0] =~ /^(integer|real|date|string|ustring)$/ ) {
         $self->{x}->dataElement( $data->[0], $data->[1] );
     } elsif ( $data->[0] eq "UID" ) {
+
         # UIDs are only hackishly supported in the XML version.
         # Apple's plutil converts them as follows:
         $self->{x}->startTag("dict");

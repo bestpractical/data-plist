@@ -40,7 +40,7 @@ sub serialize_class {
 
 sub serialize_equiv {
     my $self = shift;
-    return { %{ $self } };
+    return { %{$self} };
 }
 
 sub serialize {
@@ -48,9 +48,9 @@ sub serialize {
     my %dict;
     $dict{'$class'} = $self->serialize_class;
     my $equiv = $self->serialize_equiv;
-    for my $key (keys %{$equiv}) {
-        my $value = Data::Plist::Writer->serialize_value($equiv->{$key});
-        if ($value->[0] =~ /^(data|integer|real|true|false)$/) {
+    for my $key ( keys %{$equiv} ) {
+        my $value = Data::Plist::Writer->serialize_value( $equiv->{$key} );
+        if ( $value->[0] =~ /^(data|integer|real|true|false)$/ ) {
             $dict{$key} = $value;
         } else {
             $dict{$key} = [ UID => $value ];

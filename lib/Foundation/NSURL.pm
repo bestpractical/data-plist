@@ -7,8 +7,8 @@ use base qw/Foundation::NSObject URI::http/;
 
 sub replacement {
     my $self = shift;
-    my $uri = URI->new($self->{"NS.relative"}, "http");
-    bless $uri, (ref $self);
+    my $uri = URI->new( $self->{"NS.relative"}, "http" );
+    bless $uri, ( ref $self );
     return $uri;
 }
 

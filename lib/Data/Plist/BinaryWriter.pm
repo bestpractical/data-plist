@@ -21,8 +21,7 @@ sub write_fh {
     $self->{objcache} = {};
     if ( $self->{size} >= 2**8 ) {
         $self->{refsize} = 2;
-    }
-    else {
+    } else {
         $self->{refsize} = 1;
     }
     print $fh "bplist00";
@@ -52,7 +51,7 @@ sub dispatch {
     my $digest = eval { Digest::MD5::md5_hex( Storable::freeze($arrayref) ) };
     die "Can't $method" unless $self->can($method);
     $self->{objcache}{$digest} = $self->$method( $arrayref->[1] )
-      unless ( exists $self->{objcache}{$digest} );
+        unless ( exists $self->{objcache}{$digest} );
     return $self->{objcache}{$digest};
 }
 
@@ -64,12 +63,11 @@ sub make_type {
     my $optint = "";
     if ( $len < 15 ) {
         $type .= sprintf( "%x", $len );
-    }
-    else {
+    } else {
         $type .= "f";
         my $optlen = $self->power($len);
-        $optint =
-          pack( "C" . $self->pack_in($optlen), hex( "1" . $optlen ), $len );
+        $optint = pack( "C" . $self->pack_in($optlen), hex( "1" . $optlen ),
+            $len );
     }
     $ans = pack( "H*", $type ) . $optint;
 
@@ -96,10 +94,11 @@ sub write_integer {
         my $lw = Math::BigInt->new($int);
         $lw->band( Math::BigInt->new("4294967295") );
 
-        $obj =
-          $self->make_type( $type, $len ) . pack( "N", $hw ) . pack( "N", $lw );
-    }
-    else {
+        $obj
+            = $self->make_type( $type, $len )
+            . pack( "N", $hw )
+            . pack( "N", $lw );
+    } else {
         $fmt = $self->pack_in($len);
         $obj = pack( "C" . $fmt, hex( $type . $len ), $int );
     }
@@ -214,7 +213,7 @@ sub write_data {
 
 sub count {
 
-    # this might be slightly over, since it doesn't take into account duplicates
+  # this might be slightly over, since it doesn't take into account duplicates
     my $self       = shift;
     my ($arrayref) = @_;
     my $type       = $arrayref->[0];
@@ -224,13 +223,11 @@ sub count {
         $value = 1 + @keys;
         $value += $_ for map { $self->count( $arrayref->[1]->{$_} ) } @keys;
         return $value;
-    }
-    elsif ( $type eq "array" ) {
+    } elsif ( $type eq "array" ) {
         $value = 1;
         $value += $_ for map { $self->count($_) } @{ $arrayref->[1] };
         return $value;
-    }
-    else {
+    } else {
         return 1;
     }
 }
@@ -252,21 +249,17 @@ sub power {
         return 3;
 
         # actually refers to 2^3 bytes
-    }
-    elsif ( $int > 65535 ) {
+    } elsif ( $int > 65535 ) {
         return 2;
 
         # actually refers to 2^2 bytes
-    }
-    elsif ( $int > 255 ) {
+    } elsif ( $int > 255 ) {
         return 1;
 
         # I'm sure you see the trend
-    }
-    elsif ( $int < 0 ) {
+    } elsif ( $int < 0 ) {
         return 3;
-    }
-    else {
+    } else {
         return 0;
     }
 }
@@ -278,18 +271,15 @@ sub bytes {
         return 4;
 
         # actually refers to 4 bytes
-    }
-    elsif ( $int > 2**16 ) {
+    } elsif ( $int > 2**16 ) {
         return 3;
 
         # actually refers to 3 bytes
-    }
-    elsif ( $int > 255 ) {
+    } elsif ( $int > 255 ) {
         return 2;
 
         # I'm sure you see the trend
-    }
-    else {
+    } else {
         return 1;
     }
 }

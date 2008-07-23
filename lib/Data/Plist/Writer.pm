@@ -6,27 +6,27 @@ use Scalar::Util;
 
 sub new {
     my $class = shift;
-    my %args = (serialize => 1, @_);
+    my %args = ( serialize => 1, @_ );
     return bless \%args => $class;
 }
 
 sub write {
-    my $self = shift;
+    my $self   = shift;
     my $object = pop;
-    my $to = shift;
+    my $to     = shift;
 
-    if (not $to) {
+    if ( not $to ) {
         my $content = '';
         my $fh;
         open( $fh, ">", \$content );
-        $self->write_fh($fh, $object) or return;
+        $self->write_fh( $fh, $object ) or return;
         return $content;
-    } elsif (ref $to) {
-        $self->write_fh($to, $object)
+    } elsif ( ref $to ) {
+        $self->write_fh( $to, $object );
     } else {
         my $fh;
         open( $fh, ">", $to ) or die "Can't open $to for writing: $!";
-        $self->write_fh($fh, $object) or return;
+        $self->write_fh( $fh, $object ) or return;
     }
     return;
 }
@@ -35,21 +35,21 @@ sub fold_uids {
     my $self = shift;
     my $data = shift;
 
-    if ($data->[0] eq "UID") {
+    if ( $data->[0] eq "UID" ) {
         require Digest::MD5;
-        my $digest = Digest::MD5::md5_hex(YAML::Dump($data->[1]));
-        if (exists $self->{objcache}{$digest}) {
+        my $digest = Digest::MD5::md5_hex( YAML::Dump( $data->[1] ) );
+        if ( exists $self->{objcache}{$digest} ) {
             return [ UID => $self->{objcache}{$digest} ];
         }
-        push @{$self->{objects}}, $self->fold_uids($data->[1]);
-        $self->{objcache}{$digest} = @{$self->{objects}} - 1;
-        return [ UID => @{$self->{objects}} - 1 ];
-    } elsif ($data->[0] eq "array") {
-        return ["array", [map {$self->fold_uids($_)} @{$data->[1]}]];
-    } elsif ($data->[0] eq "dict") {
-        my %dict = %{$data->[1]};
-        $dict{$_} = $self->fold_uids($dict{$_}) for keys %dict;
-        return ["dict", \%dict];
+        push @{ $self->{objects} }, $self->fold_uids( $data->[1] );
+        $self->{objcache}{$digest} = @{ $self->{objects} } - 1;
+        return [ UID => @{ $self->{objects} } - 1 ];
+    } elsif ( $data->[0] eq "array" ) {
+        return [ "array", [ map { $self->fold_uids($_) } @{ $data->[1] } ] ];
+    } elsif ( $data->[0] eq "dict" ) {
+        my %dict = %{ $data->[1] };
+        $dict{$_} = $self->fold_uids( $dict{$_} ) for keys %dict;
+        return [ "dict", \%dict ];
     } else {
         return $data;
     }
@@ -58,7 +58,7 @@ sub fold_uids {
 sub serialize_value {
     my $self = shift;
     my ($value) = @_;
-    if (not defined $value) {
+    if ( not defined $value ) {
         return [ string => '$null' ];
     } elsif ( ref $value ) {
         if ( ref $value eq "ARRAY" ) {
@@ -68,10 +68,11 @@ sub serialize_value {
             my %hash = %{$value};
             $hash{$_} = $self->serialize_value( $hash{$_} ) for keys %hash;
             return [ dict => \%hash ];
-        } elsif ($value->isa("Foundation::NSObject")) {
+        } elsif ( $value->isa("Foundation::NSObject") ) {
             return $value->serialize;
-        } elsif ($value->isa("DateTime")) {
-            return [ date => $value->epoch - 978307200 + $value->nanosecond / 1e9 ];
+        } elsif ( $value->isa("DateTime") ) {
+            return [ date => $value->epoch - 978307200
+                    + $value->nanosecond / 1e9 ];
         } else {
             die "Can't serialize unknown ref @{[ref $value]}\n";
         }
@@ -79,7 +80,7 @@ sub serialize_value {
         return [ integer => $value ];
     } elsif ( Scalar::Util::looks_like_number($value) ) {
         return [ real => $value ];
-    } elsif ( $value =~ /\0/) {
+    } elsif ( $value =~ /\0/ ) {
         return [ data => $value ];
     } else {
         return [ string => $value ];
@@ -87,11 +88,13 @@ sub serialize_value {
 }
 
 sub serialize {
-    my $self = shift;
+    my $self   = shift;
     my $object = shift;
 
     return $self->serialize_value($object)
-      if not ref($object) or ref($object) =~ /ARRAY|HASH/ or not $object->can("serialize");
+        if not ref($object)
+        or ref($object) =~ /ARRAY|HASH/
+        or not $object->can("serialize");
 
     $object = $object->serialize;
 

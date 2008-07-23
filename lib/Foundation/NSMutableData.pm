@@ -14,9 +14,8 @@ sub data {
 sub serialize_equiv {
     my $self = shift;
     return $self->SUPER::serialize_equiv unless ref $self->data;
-    return { "NS.data" => Data::Plist::BinaryWriter->write($self->data) };
+    return { "NS.data" => Data::Plist::BinaryWriter->write( $self->data ) };
 }
 
 1;
-
 

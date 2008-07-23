@@ -65,7 +65,8 @@ is_deeply( $ret->raw_data => [ null => 0 ], "Has a null" );
 
 # Data overlap
 $ret = eval {
-    $read->open_string( "bplist00" . pack( "Cx6CC(x4N)3", 8, 1, 1, 1, 0, 8 ) );
+    $read->open_string(
+        "bplist00" . pack( "Cx6CC(x4N)3", 8, 1, 1, 1, 0, 8 ) );
 };
 ok( not($ret), "data overlaps with trailer" );
 like( "$@", qr/invalid address/i, "Threw an error" );
@@ -89,14 +90,16 @@ is_deeply( $ret->raw_data => [ null => 0 ], "Has a null" );
 
 # Offset table has too early address
 $ret = eval {
-    $read->open_string( "bplist00" . pack( "Cx6CC(x4N)3", 0, 1, 1, 1, 0, 8 ) );
+    $read->open_string(
+        "bplist00" . pack( "Cx6CC(x4N)3", 0, 1, 1, 1, 0, 8 ) );
 };
 ok( not($ret), "address too small" );
 like( "$@", qr/invalid address/i, "Threw an error" );
 
 # Offset table has too late address
 $ret = eval {
-    $read->open_string( "bplist00" . pack( "Cx6CC(x4N)3", 10, 1, 1, 1, 0, 8 ) );
+    $read->open_string(
+        "bplist00" . pack( "Cx6CC(x4N)3", 10, 1, 1, 1, 0, 8 ) );
 };
 ok( not($ret), "address too small" );
 like( "$@", qr/invalid address/i, "Threw an error" );
@@ -153,8 +156,8 @@ ok( not($ret), "Invalid offset table address" );
 like( "$@", qr/invalid offset/i, "Threw an error" );
 
 # Refsize is too small for NumObjects
-my $string =
-  do { local @ARGV = "t/data/longfile-03.binary.plist"; local $/; <> };
+my $string
+    = do { local @ARGV = "t/data/longfile-03.binary.plist"; local $/; <> };
 ok( $string, "Read from file." );
 use bytes;
 substr( $string, -25, 1, "\x01" );
@@ -200,14 +203,12 @@ ok( $ret->raw_data, "Has data inside" );
 # Test raw structure
 is_deeply(
     $ret->raw_data,
-    [
-        dict => {
+    [   dict => {
             a => [
                 array => [
                     [ integer => 1 ],
                     [ integer => 2 ],
-                    [
-                        dict => {
+                    [   dict => {
                             foo  => [ string => "bar" ],
                             baz  => [ string => "troz" ],
                             zort => [ string => '$null' ],

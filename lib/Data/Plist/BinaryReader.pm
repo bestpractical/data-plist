@@ -16,17 +16,13 @@ sub read_misc {
     my ($type) = @_;
     if ( $type == 0 ) {
         return [ "null", 0 ];
-    }
-    elsif ( $type == 8 ) {
+    } elsif ( $type == 8 ) {
         return [ "false", 0 ];
-    }
-    elsif ( $type == 9 ) {
+    } elsif ( $type == 9 ) {
         return [ "true", 1 ];
-    }
-    elsif ( $type == 15 ) {
+    } elsif ( $type == 15 ) {
         return [ "fill", 15 ];
-    }
-    else {
+    } else {
         return [ "???", $type ];
     }
 }
@@ -39,22 +35,18 @@ sub read_integer {
     read( $self->{fh}, $buf, 1 << $size );
     if ( $size == 0 ) {    # 8 bit
         $val = unpack( "C", $buf );
-    }
-    elsif ( $size == 1 ) {    # 16 bit
+    } elsif ( $size == 1 ) {    # 16 bit
         $val = unpack( "n", $buf );
-    }
-    elsif ( $size == 2 ) {    # 32 bit
+    } elsif ( $size == 2 ) {    # 32 bit
         $val = unpack( "N", $buf );
-    }
-    elsif ( $size == 3 ) {    # 64 bit
+    } elsif ( $size == 3 ) {    # 64 bit
 
         my ( $hw, $lw ) = unpack( "NN", $buf );
         $val = Math::BigInt->new($hw)->blsft(32)->bior($lw);
         if ( $val->bcmp( Math::BigInt->new(2)->bpow(63) ) > 0 ) {
             $val -= Math::BigInt->new(2)->bpow(64);
         }
-    }
-    else {
+    } else {
         die "Invalid size for integer ($size)";
     }
 
@@ -69,11 +61,9 @@ sub read_real {
     read( $self->{fh}, $buf, 1 << $size );
     if ( $size == 2 ) {    # 32 bit
         $val = unpack( "f", reverse $buf );
-    }
-    elsif ( $size == 3 ) {    # 64 bit
+    } elsif ( $size == 3 ) {    # 64 bit
         $val = unpack( "d", reverse $buf );
-    }
-    else {
+    } else {
         die "Invalid size for real ($size)";
     }
 
@@ -84,7 +74,7 @@ sub read_date {
     my $self = shift;
     my ($size) = @_;
     die "Invalid size for date ($size)"
-      if ( $size > 3 or $size < 2 );
+        if ( $size > 3 or $size < 2 );
 
     # Dates are just stored as floats
     return [ "date", $self->read_real($size)->[1] ];
@@ -139,8 +129,9 @@ sub read_array {
     my $self = shift;
     my ($size) = @_;
 
-    return [ "array",
-        [ map { $self->binary_read($_) } $self->read_refs($size) ] ];
+    return [
+        "array", [ map { $self->binary_read($_) } $self->read_refs($size) ]
+    ];
 }
 
 sub read_dict {
@@ -178,19 +169,19 @@ sub binary_read {
 
     if ( defined $objNum ) {
         die "Bad offset: $objNum"
-          unless $objNum < @{ $self->{offsets} };
+            unless $objNum < @{ $self->{offsets} };
         seek( $self->{fh}, $self->{offsets}[$objNum], SEEK_SET );
     }
 
     # get object type/size
     my $buf;
     read( $self->{fh}, $buf, 1 )
-      or die "Can't read type byte: $!\byte:";
+        or die "Can't read type byte: $!\byte:";
 
     my $size    = unpack( "C*", $buf ) & 0x0F;    # Low nybble is size
     my $objType = unpack( "C*", $buf ) >> 4;      # High nybble is type
     $size = $self->binary_read->[1]
-      if $objType != 0 and $size == 15;
+        if $objType != 0 and $size == 15;
 
     my %types = (
         0  => "misc",
@@ -219,11 +210,11 @@ sub open_string {
     # with "Out of memory" or "panic: memory wrap"; Do some
     # error-proofing here.
     die "Not a binary plist file\n"
-      unless length $str >= 8 and substr( $str, 0, 8 ) eq "bplist00";
+        unless length $str >= 8 and substr( $str, 0, 8 ) eq "bplist00";
     die "Read of plist trailer failed\n"
-      unless length $str >= 40;
+        unless length $str >= 40;
     die "Invalid top object identifier\n"
-      unless length $str > 40;
+        unless length $str > 40;
 
     return $self->SUPER::open_string($str);
 }
@@ -244,37 +235,32 @@ sub open_fh {
 
     # get trailer
     eval { seek( $self->{fh}, -32, SEEK_END ) }
-      or die "Read of plist trailer failed\n";
+        or die "Read of plist trailer failed\n";
     my $end = tell( $self->{fh} );
 
     die "Read of plist trailer failed\n"
-      unless $end >= 8;
+        unless $end >= 8;
 
     unless ( read( $self->{fh}, $buf, 32 ) == 32 ) {
         die "Read of plist trailer failed\n";
     }
     local $self->{refsize};
     my ( $OffsetSize, $NumObjects, $TopObject, $OffsetTableOffset );
-    (
-        $OffsetSize, $self->{refsize}, $NumObjects, $TopObject,
+    (   $OffsetSize, $self->{refsize}, $NumObjects, $TopObject,
         $OffsetTableOffset
     ) = unpack "x6CC(x4N)3", $buf;
 
     # Sanity check the trailer
     if ( $OffsetSize < 1 or $OffsetSize > 4 ) {
         die "Invalid offset size\n";
-    }
-    elsif ( $self->{refsize} < 1 or $self->{refsize} > 2 ) {
+    } elsif ( $self->{refsize} < 1 or $self->{refsize} > 2 ) {
         die "Invalid reference size\n";
-    }
-    elsif ( 2**( 8 * $self->{refsize} ) < $NumObjects ) {
+    } elsif ( 2**( 8 * $self->{refsize} ) < $NumObjects ) {
         die
-"Reference size (@{[$self->{refsize}]}) is too small for purported number of objects ($NumObjects)\n";
-    }
-    elsif ( $TopObject >= $NumObjects ) {
+            "Reference size (@{[$self->{refsize}]}) is too small for purported number of objects ($NumObjects)\n";
+    } elsif ( $TopObject >= $NumObjects ) {
         die "Invalid top object identifier\n";
-    }
-    elsif ($OffsetTableOffset < 8
+    } elsif ( $OffsetTableOffset < 8
         or $OffsetTableOffset > $end
         or $OffsetTableOffset + $NumObjects * $OffsetSize > $end )
     {
@@ -285,27 +271,27 @@ sub open_fh {
     seek( $fh, $OffsetTableOffset, SEEK_SET );
 
     my $offsetTable;
-    my $readSize = read( $self->{fh}, $offsetTable, $NumObjects * $OffsetSize );
+    my $readSize
+        = read( $self->{fh}, $offsetTable, $NumObjects * $OffsetSize );
     if ( $readSize != $NumObjects * $OffsetSize ) {
         die "Offset table read $readSize bytes, expected ",
-          $NumObjects * $OffsetSize;
+            $NumObjects * $OffsetSize;
     }
 
-    my @Offsets =
-      unpack( [ "", "C*", "n*", "(H6)*", "N*" ]->[$OffsetSize], $offsetTable );
+    my @Offsets = unpack( [ "", "C*", "n*", "(H6)*", "N*" ]->[$OffsetSize],
+        $offsetTable );
     if ( $OffsetSize == 3 ) {
         @Offsets = map { hex($_) } @Offsets;
     }
 
     # Catch invalid offset addresses in the offset table
-    if (
-        grep {
-                 $_ < 8
-              or $_ >= $end
-              or (  $_ >= $OffsetTableOffset
+    if (grep {
+                   $_ < 8
+                or $_ >= $end
+                or ($_ >= $OffsetTableOffset
                 and $_ < $OffsetTableOffset + $NumObjects * $OffsetSize )
         } @Offsets
-      )
+        )
     {
         die "Invalid address in offset table\n";
     }
