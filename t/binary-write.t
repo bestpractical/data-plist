@@ -1,4 +1,4 @@
-use Test::More tests => 223;
+use Test::More tests => 230;
 
 use strict;
 use warnings;
@@ -83,7 +83,8 @@ ok( not($ret), "Binary plist didn't write." );
 like( $@, qr/can't/i, "Threw an error." );
 
 # Large files
-files("examples/bigfiles/bigfile-00.binary.plist");
+files("t/data/bigfile-01.binary.plist");
+files("t/data/bigfile-02.binary.plist");
 
 sub files {
     my $write      = Data::Plist::BinaryWriter->new( serialize => 0 );
