@@ -1,4 +1,4 @@
-use Test::More tests => 64;
+use Test::More tests => 72;
 
 use strict;
 use warnings;
@@ -22,6 +22,10 @@ isa_ok( $write, "Data::Plist::BinaryWriter" );
 
 # Magic header is magic
 $ret = eval { $read->open_string("moose") };
+ok( not($ret), "Not bplist doesn't load" );
+like( "$@", qr/not a binary plist/i, "Threw an error" );
+
+$ret = eval { $read->open_string("bpllst00") };
 ok( not($ret), "Not bplist doesn't load" );
 like( "$@", qr/not a binary plist/i, "Threw an error" );
 
@@ -131,10 +135,24 @@ $ret = eval {
 ok( not($ret), "Invalid offset" );
 like( "$@", qr/invalid offset/i, "Threw an error" );
 
+$ret = eval {
+    $read->open_string(
+        "bplist00" . pack( "Cnx6CC(x4N)3", 0, 8, 0, 1, 1, 0, 9 ) );
+};
+ok( not($ret), "Invalid offset" );
+like( "$@", qr/invalid offset/i, "Threw an error" );
+
 # Invalid refsize
 $ret = eval {
     $read->open_string(
         "bplist00" . pack( "Cnx6CC(x4N)3", 0, 8, 2, 3, 1, 0, 9 ) );
+};
+ok( not($ret), "Invalid refsize" );
+like( "$@", qr/invalid reference/i, "Threw an error" );
+
+$ret = eval {
+    $read->open_string(
+        "bplist00" . pack( "Cnx6CC(x4N)3", 0, 8, 2, 0, 1, 0, 9 ) );
 };
 ok( not($ret), "Invalid refsize" );
 like( "$@", qr/invalid reference/i, "Threw an error" );
@@ -154,6 +172,13 @@ $ret = eval {
 };
 ok( not($ret), "Invalid offset table address" );
 like( "$@", qr/invalid offset/i, "Threw an error" );
+
+$ret = eval {
+    $read->open_string(
+        "bplist00" . pack( "CCx6CC(x4N)3", 0, 8, 1, 1, 1, 0, 7 ) );
+};
+ok( not($ret), "Invalid offset table address" );
+like( "$@", qr/invalid offset table/i, "Threw an error" );
 
 # Refsize is too small for NumObjects
 my $string
