@@ -297,8 +297,11 @@ packed in reverse.
 
 sub write_real {
     my $self    = shift;
-    my ($float) = @_;
-    my $type    = $self->make_type( "2", 3 );
+    my ($float, $type) = @_;
+    unless ( defined $type ) {
+        $type = "2";
+    }
+    my $type    = $self->make_type( $type, 3 );
     my $obj     = $type . reverse( pack( "d", $float ) );
     return $self->binary_write($obj);
 }
@@ -314,9 +317,7 @@ the binary file. Dates are treated like ordinary floats.
 sub write_date {
     my $self   = shift;
     my ($date) = @_;
-    my $type   = $self->make_type( "3", 3 );
-    my $obj    = $type . reverse( pack( "d", $date ) );
-    return $self->binary_write($obj);
+    return $self->write_real($date, "3");
 }
 
 =head2 write_null $null
