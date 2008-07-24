@@ -6,18 +6,20 @@ from Perl data structures
 =head1 SYNOPSIS
 
 # Create new
-my $write = Data::Plist::BinaryWriter->new();
-# or
-$write = Data::Plist::BinaryWriter->new(serialize => 0);
+ my $write = Data::Plist::BinaryWriter->new();
 
-# Write data structures
-my $ret = $write->write($data);
+# Writing to a string ($ret is binary output)
+ my $ret = $write->write($data);
+
+# Writing to a file C<$filename>
+ $write->write($filename, $data);
 
 =head1 DESCRIPTION
 
-C<Data::Plist::BinaryWriter> takes either serialized or
-unserialized perl data structures and recursively writes
-them to a binary file.
+C<Data::Plist::BinaryWriter> takes serialized perl data
+structures (see L<Data::Plist/Serialized data>) and
+recursively writes to a given filehandle in Apple's binary
+property list format.
 
 =cut
 
@@ -31,17 +33,20 @@ use Digest::MD5;
 
 use base qw/Data::Plist::Writer/;
 
-=head2 write_fh
+=head1 METHODS
 
-The main subroutine of BinaryWriter. Takes perl data
-structures and returns a binary plist beginning with
-"bplist00" and containing a 32-byte trailer.
+=head2 write_fh $fh, $data
 
-The 32-byte trailer cotains the size of the offset objects
-in the offset table, the size of the indices of the offset
-table, the number of objects in the binary file, the index
-of top object in the binary file and the offset table
-offset.
+Takes a serialized data structure C<$data> (see
+L<Data::Plist/Serialized data>) and writes it to the given
+filehandle C<$fh> in Apple's binary property list format.
+
+The format starts with "bplist00" and contains a 32-byte
+trailer. The 32-byte trailer consists of the size of the
+offset objects in the offset table, the size of the indices
+of the offset table, the number of objects in the binary
+file, the index of top object in the binary file and the
+offset table offset.
 
 =cut
 
@@ -80,11 +85,12 @@ sub write_fh {
     return 1;
 }
 
-=head2 dispatch
+=head2 dispatch $data
 
-Takes a single object and checks its data type. Checks the
-object against previously written objects. If no match is
-found, calls the appropriate write_ method. Returns the
+Takes serialized data structure C<$data> (see
+L<Data::Plist/Serialized data>) and checks its type. Checks
+the object against previously written objects. If no match
+is found, calls the appropriate write_ method. Returns the
 index into the offset table of the offset object that
 points to the data's position in the binary file.
 
@@ -102,10 +108,10 @@ sub dispatch {
     return $self->{objcache}{$digest};
 }
 
-=head2 make_type
+=head2 make_type $type, $length
 
-Takes a string representing the object's type and an
-integer indicating its size. Returns their binary
+Takes a string representing the object's type C<$type> and an
+integer indicating its size C<$length>. Returns their binary
 representation.
 
 Each object in the binary file is preceded by a byte - the
@@ -135,12 +141,13 @@ sub make_type {
     return $ans;
 }
 
-=head2 write_integer
+=head2 write_integer $int, $type
 
-Takes an integer and an optional type (used for writing
-UIDs, since they're essentially the same). Returns the
-index into the offset table of the offset object that
-points to the integer's location in the binary file.
+Takes an integer C<$int> and an optional type C<$type>
+(used for writing UIDs, since they're essentially the
+same). Returns the index into the offset table of the
+offset object that points to the integer's location in the
+binary file.
 
 =cut
 
@@ -175,11 +182,11 @@ sub write_integer {
     return $self->binary_write($obj);
 }
 
-=head2 write_string
+=head2 write_string $string
 
-Takes a UTF-8 encoded string and returns the index into the offset table
-of the offset object that points to its location in the
-binary file.
+Takes a UTF-8 encoded string C<$string> and returns the
+index into the offset table of the offset object that
+points to its location in the binary file.
 
 =cut
 
@@ -191,11 +198,11 @@ sub write_string {
     return $self->binary_write($obj);
 }
 
-=head2 write_ustring
+=head2 write_ustring $ustring
 
-Takes a UTF-16 encoded string and returns the index into the offset table
-of the offset object that points to its location in the
-binary file.
+Takes a UTF-16 encoded string C<$ustring> and returns the
+index into the offset table of the offset object that
+points to its location in the binary file.
 
 Currently unimplemented - strings are simply passed on to
 write_string, which treats them as being encoded in UTF-8.
@@ -207,14 +214,14 @@ sub write_ustring {
     return $self->write_string(@_);
 }
 
-=head2 write_dict
+=head2 write_dict $dict
 
-Takes a dict (serialized hash) and recursively processes
-each of its keys and values. Stores indices into the offset
-table of the offset objects pointing to its keys and values
-in the binary file. Returns the index into the offset table
-of the offset object that points to its location in the
-binary file.
+Takes a dict (serialized hash) C<$dict> and recursively
+processes each of its keys and values. Stores indices into
+the offset table of the offset objects pointing to its keys
+and values in the binary file. Returns the index into the
+offset table of the offset object that points to its
+location in the binary file.
 
 =cut
 
@@ -236,9 +243,9 @@ sub write_dict {
     return ( @{ $self->{index} } - 1 );
 }
 
-=head2 write_array
+=head2 write_array $array
 
-Take an array and recursively processes its
+Take an array C<$array> and recursively processes its
 contents. Stores the indices into the offset table of the
 offset objects pointing to its value. Returns the index
 into the offset table of the offset object that points to
@@ -263,9 +270,9 @@ sub write_array {
     return ( @{ $self->{index} } - 1 );
 }
 
-=head2 write_UID
+=head2 write_UID $id
 
-Takes a UID and returns the index into the offset table of
+Takes a UID C<$id> and returns the index into the offset table of
 the offset object that points to its location in the binary
 file. Passes the UID off to write_integer for actual
 writing, since they're processed in the same manner, simply
@@ -279,11 +286,12 @@ sub write_UID {
     return $self->write_integer( $id, "8" );
 }
 
-=head2 write_real
+=head2 write_real $real
 
-Takes a float and returns the index into the offset table
-of the offset object that points to its location in the
-binary file. The digits of the float are packed in reverse.
+Takes a float C<$real> and returns the index into the
+offset table of the offset object that points to its
+location in the binary file. The digits of the float are
+packed in reverse.
 
 =cut
 
@@ -295,11 +303,11 @@ sub write_real {
     return $self->binary_write($obj);
 }
 
-=head2 write_date
+=head2 write_date $date
 
-Takes a float and returns the index into the offset table
-of the offset object that points to its location in the
-binary file. Dates are treated like ordinary floats.
+Takes a date C<$date> and returns the index into the offset
+table of the offset object that points to its location in
+the binary file. Dates are treated like ordinary floats.
 
 =cut
 
@@ -311,25 +319,25 @@ sub write_date {
     return $self->binary_write($obj);
 }
 
-=head2 write_null
+=head2 write_null $null
 
-Takes a null and passes it to write_misc, along with an
-integer indicating what type of misc it is. The null
-belongs to the misc category, a group of data types not
-easily represented in perl. Miscs are only written with the
-header byte containing a 0 to indicate that they are a misc
-and their misc type.
+Takes a null C<$null> and passes it to write_misc, along
+with an integer indicating what type of misc it is. The
+null belongs to the misc category, a group of data types
+not easily represented in perl. Miscs are only written with
+the header byte containing a 0 to indicate that they are a
+misc and their misc type.
 
 =cut
 
 sub write_null {
     my $self = shift;
-    return $self->write_misc( 0, @_ );
+    return $self->write_misc( 0 );
 }
 
-=head2 write_false
+=head2 write_false $false
 
-Takes a false and passes it to write_misc, along with an
+Takes a false C<$false> and passes it to write_misc, along with an
 integer indicating what type of misc it is. The false
 belongs to the misc category, a group of data types not
 easily represented in perl. Miscs are only written with the
@@ -340,12 +348,12 @@ and their misc type.
 
 sub write_false {
     my $self = shift;
-    return $self->write_misc( 8, @_ );
+    return $self->write_misc( 8 );
 }
 
-=head2 write_true
+=head2 write_true $true
 
-Takes a true and passes it to write_misc, along with an
+Takes a true C<$true> and passes it to write_misc, along with an
 integer indicating what type of misc it is. The true
 belongs to the misc category, a group of data types not
 easily represented in perl. Miscs are only written with the
@@ -356,12 +364,12 @@ and their misc type.
 
 sub write_true {
     my $self = shift;
-    return $self->write_misc( 9, @_ );
+    return $self->write_misc( 9 );
 }
 
-=head2 write_fill
+=head2 write_fill $fill
 
-Takes a fill and passes it to write_misc, along with an
+Takes a fill C<$fill> and passes it to write_misc, along with an
 integer indicating what type of misc it is. The fill
 belongs to the misc category, a group of data types not
 easily represented in perl. Miscs are only written with the
@@ -372,28 +380,28 @@ and their misc type.
 
 sub write_fill {
     my $self = shift;
-    return $self->write_misc( 15, @_ );
+    return $self->write_misc( 15 );
 }
 
-=head2 write_misc
+=head2 write_misc $type
 
-Takes an object belonging in the misc categorty (false,
-null, true or fill) and returns the index into the offset
-table of the offset object that points to its location in
-the file.
+Takes an integer indicating an object belonging to the misc
+category C<$type> (false, null, true or fill) and returns the index
+into the offset table of the offset object that points to
+its location in the file.
 
 =cut
 
 sub write_misc {
     my $self = shift;
-    my ( $type, $misc ) = @_;
+    my ( $type ) = @_;
     my $obj = $self->make_type( "0", $type );
     return $self->binary_write($obj);
 }
 
-=head2 write_data
+=head2 write_data $data
 
-Takes some binary data and returns the index into the
+Takes some binary data C<$data> and returns the index into the
 offset table of the offset object that points to its
 location in the file. Doesn't attempt to process the data
 at all.
@@ -409,12 +417,13 @@ sub write_data {
     return $self->binary_write($obj);
 }
 
-=head2 count
+=head2 count $data
 
-Counts the number of objects in the provided data. Does not
-take into account duplicates, so this number might be
-slightly higher than the number of objects that is
-indicated in the 32-byte trailer.
+Recursively counts the number of objects in a serialized
+data structure C<$data>. Does not take into account
+duplicates, so this number might be slightly higher than
+the number of objects that is indicated in the 32-byte
+trailer.
 
 =cut
 
@@ -439,12 +448,13 @@ sub count {
     }
 }
 
-=head2 binary_write
+=head2 binary_write $obj
 
 Does the actual writing to the binary file. Takes some
-binary data and writes it. Also adds the location of the
-binary data to the offset table and returns the index into
-the offset table of the current object.
+binary data C<$obj> and writes it to the filehandle. Also
+adds the location of the binary data to the offset table
+and returns the index into the offset table of the current
+object.
 
 =cut
 
@@ -458,11 +468,11 @@ sub binary_write {
     return ( @{ $self->{index} } - 1 );
 }
 
-=head2 power
+=head2 power $int
 
 Calculates the number of bytes necessary to encode an
-integer. Returns a power of 2 indicating the number of
-bytes.
+integer C<$int>. Returns a power of 2 indicating the number
+of bytes.
 
 =cut
 
@@ -488,10 +498,10 @@ sub power {
     }
 }
 
-=head2 bytes
+=head2 bytes $int
 
 Calculates the number of bytes necessary to encode an
-integer. Returns the actual number of bytes.
+integer C<$int>. Returns the actual number of bytes.
 
 =cut
 
@@ -515,10 +525,10 @@ sub bytes {
     }
 }
 
-=head2 pack_in
+=head2 pack_in $int
 
-Takes either a power of 2 or a number of bytes and returns
-the format pack() needs for encoding.
+Takes either a power of 2 or a number of bytes C<$int> and
+returns the format pack() needs for encoding.
 
 =cut
 
