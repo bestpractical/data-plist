@@ -5,13 +5,13 @@ from Perl data structures
 
 =head1 SYNOPSIS
 
-# Create new
+ # Create new
  my $write = Data::Plist::BinaryWriter->new();
 
-# Writing to a string ($ret is binary output)
+ # Writing to a string ($ret is binary output)
  my $ret = $write->write($data);
 
-# Writing to a file C<$filename>
+ # Writing to a file C<$filename>
  $write->write($filename, $data);
 
 =head1 DESCRIPTION
@@ -216,12 +216,12 @@ sub write_ustring {
 
 =head2 write_dict $dict
 
-Takes a dict (serialized hash) C<$dict> and recursively
-processes each of its keys and values. Stores indices into
-the offset table of the offset objects pointing to its keys
-and values in the binary file. Returns the index into the
-offset table of the offset object that points to its
-location in the binary file.
+Takes a hash reference C<$dict> and recursively processes
+each of its keys and values. Stores indices into the offset
+table of the offset objects pointing to its keys and values
+in the binary file. Returns the index into the offset table
+of the offset object that points to its location in the
+binary file.
 
 =cut
 
@@ -245,9 +245,9 @@ sub write_dict {
 
 =head2 write_array $array
 
-Take an array C<$array> and recursively processes its
-contents. Stores the indices into the offset table of the
-offset objects pointing to its value. Returns the index
+Take an array reference C<$array> and recursively processes
+its contents. Stores the indices into the offset table of
+the offset objects pointing to its value. Returns the index
 into the offset table of the offset object that points to
 its location in the binary file.
 
@@ -272,11 +272,11 @@ sub write_array {
 
 =head2 write_UID $id
 
-Takes a UID C<$id> and returns the index into the offset table of
-the offset object that points to its location in the binary
-file. Passes the UID off to write_integer for actual
-writing, since they're processed in the same manner, simply
-with different types.
+Takes a UID C<$id> and returns the index into the offset
+table of the offset object that points to its location in
+the binary file. Passes the UID off to L</write_integer> for
+actual writing, since they're processed in the same manner,
+simply with different types.
 
 =cut
 
@@ -286,11 +286,13 @@ sub write_UID {
     return $self->write_integer( $id, "8" );
 }
 
-=head2 write_real $real
+=head2 write_real $real, $type
 
-Takes a float C<$real> and returns the index into the
+Takes a float C<$real> and an optional type C<$type>
+(used for writing dates, since they're essentially the
+same), and returns the index into the
 offset table of the offset object that points to its
-location in the binary file. The digits of the float are
+location in the binary file. The bytes of the float are
 packed in reverse.
 
 =cut
@@ -301,8 +303,7 @@ sub write_real {
     unless ( defined $type ) {
         $type = "2";
     }
-    my $type    = $self->make_type( $type, 3 );
-    my $obj     = $type . reverse( pack( "d", $float ) );
+    my $obj     = $self->make_type( $type, 3 ) . reverse( pack( "d", $float ) );
     return $self->binary_write($obj);
 }
 
@@ -310,7 +311,9 @@ sub write_real {
 
 Takes a date C<$date> and returns the index into the offset
 table of the offset object that points to its location in
-the binary file. Dates are treated like ordinary floats.
+the binary file. Passes the date off to L</write_real> for
+actual writing, since they're processed in the same manner,
+simply with different types.
 
 =cut
 
@@ -322,12 +325,9 @@ sub write_date {
 
 =head2 write_null $null
 
-Takes a null C<$null> and passes it to write_misc, along
+Takes a null C<$null> and passes it to L</write_misc>, along
 with an integer indicating what type of misc it is. The
-null belongs to the misc category, a group of data types
-not easily represented in perl. Miscs are only written with
-the header byte containing a 0 to indicate that they are a
-misc and their misc type.
+null belongs to the misc category (see L</write_misc>).
 
 =cut
 
@@ -338,12 +338,9 @@ sub write_null {
 
 =head2 write_false $false
 
-Takes a false C<$false> and passes it to write_misc, along with an
+Takes a false C<$false> and passes it to L</write_misc>, along with an
 integer indicating what type of misc it is. The false
-belongs to the misc category, a group of data types not
-easily represented in perl. Miscs are only written with the
-header byte containing a 0 to indicate that they are a misc
-and their misc type.
+belongs to the misc category (see L</write_misc>).
 
 =cut
 
@@ -354,12 +351,9 @@ sub write_false {
 
 =head2 write_true $true
 
-Takes a true C<$true> and passes it to write_misc, along with an
+Takes a true C<$true> and passes it to L</write_misc>, along with an
 integer indicating what type of misc it is. The true
-belongs to the misc category, a group of data types not
-easily represented in perl. Miscs are only written with the
-header byte containing a 0 to indicate that they are a misc
-and their misc type.
+belongs to the misc category (see L</write_misc>).
 
 =cut
 
@@ -370,12 +364,9 @@ sub write_true {
 
 =head2 write_fill $fill
 
-Takes a fill C<$fill> and passes it to write_misc, along with an
+Takes a fill C<$fill> and passes it to L</write_misc>, along with an
 integer indicating what type of misc it is. The fill
-belongs to the misc category, a group of data types not
-easily represented in perl. Miscs are only written with the
-header byte containing a 0 to indicate that they are a misc
-and their misc type.
+belongs to the misc category (see L</write_misc>).
 
 =cut
 
@@ -387,9 +378,12 @@ sub write_fill {
 =head2 write_misc $type
 
 Takes an integer indicating an object belonging to the misc
-category C<$type> (false, null, true or fill) and returns the index
-into the offset table of the offset object that points to
-its location in the file.
+category C<$type> (false, null, true or fill) and returns
+the index into the offset table of the offset object that
+points to its location in the file. Miscs are a groupo of
+data types not easily represented in Perl, and they are
+written with the only header byte containing a 0 to
+indicate that they are a misc and their misc type.
 
 =cut
 
