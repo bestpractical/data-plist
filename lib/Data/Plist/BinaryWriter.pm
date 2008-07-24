@@ -1,3 +1,26 @@
+=head1 NAME
+
+Data::Plist::BinaryWriter - write binary property lists
+from Perl data structures
+
+=head1 SYNOPSIS
+
+# Create new
+my $write = Data::Plist::BinaryWriter->new();
+# or
+$write = Data::Plist::BinaryWriter->new(serialize => 0);
+
+# Write data structures
+my $ret = $write->write($data);
+
+=head1 DESCRIPTION
+
+C<Data::Plist::BinaryWriter> takes either serialized or
+unserialized perl data structures and recursively writes
+them to a binary file.
+
+=cut
+
 package Data::Plist::BinaryWriter;
 
 use strict;
@@ -7,6 +30,20 @@ use Math::BigInt;
 use Digest::MD5;
 
 use base qw/Data::Plist::Writer/;
+
+=head2 write_fh
+
+The main subroutine of BinaryWriter. Takes perl data
+structures and returns a binary plist beginning with
+"bplist00" and containing a 32-byte trailer.
+
+The 32-byte trailer cotains the size of the offset objects
+in the offset table, the size of the indices of the offset
+table, the number of objects in the binary file, the index
+of top object in the binary file and the offset table
+offset.
+
+=cut
 
 sub write_fh {
     my $self = shift;
@@ -43,6 +80,16 @@ sub write_fh {
     return 1;
 }
 
+=head2 dispatch
+
+Takes a single object and checks its data type. Checks the
+object against previously written objects. If no match is
+found, calls the appropriate write_ method. Returns the
+index into the offset table of the offset object that
+points to the data's position in the binary file.
+
+=cut
+
 sub dispatch {
     my $self       = shift;
     my ($arrayref) = @_;
@@ -54,6 +101,20 @@ sub dispatch {
         unless ( exists $self->{objcache}{$digest} );
     return $self->{objcache}{$digest};
 }
+
+=head2 make_type
+
+Takes a string representing the object's type and an
+integer indicating its size. Returns their binary
+representation.
+
+Each object in the binary file is preceded by a byte - the
+higher nybble denoting its type and the lower its size. For
+objects whose size is equal to or great than 15, the lower
+byte contains an f and an integer object is added right
+after the first byte containing the object's actual size.
+
+=cut
 
 sub make_type {
     my $self = shift;
@@ -73,6 +134,15 @@ sub make_type {
 
     return $ans;
 }
+
+=head2 write_integer
+
+Takes an integer and an optional type (used for writing
+UIDs, since they're essentially the same). Returns the
+index into the offset table of the offset object that
+points to the integer's location in the binary file.
+
+=cut
 
 sub write_integer {
     my $self = shift;
@@ -105,6 +175,14 @@ sub write_integer {
     return $self->binary_write($obj);
 }
 
+=head2 write_string
+
+Takes a UTF-8 encoded string and returns the index into the offset table
+of the offset object that points to its location in the
+binary file.
+
+=cut
+
 sub write_string {
     my $self     = shift;
     my ($string) = @_;
@@ -113,10 +191,32 @@ sub write_string {
     return $self->binary_write($obj);
 }
 
+=head2 write_ustring
+
+Takes a UTF-16 encoded string and returns the index into the offset table
+of the offset object that points to its location in the
+binary file.
+
+Currently unimplemented - strings are simply passed on to
+write_string, which treats them as being encoded in UTF-8.
+
+=cut
+
 sub write_ustring {
     my $self = shift;
     return $self->write_string(@_);
 }
+
+=head2 write_dict
+
+Takes a dict (serialized hash) and recursively processes
+each of its keys and values. Stores indices into the offset
+table of the offset objects pointing to its keys and values
+in the binary file. Returns the index into the offset table
+of the offset object that points to its location in the
+binary file.
+
+=cut
 
 sub write_dict {
     my $self   = shift;
@@ -136,6 +236,16 @@ sub write_dict {
     return ( @{ $self->{index} } - 1 );
 }
 
+=head2 write_array
+
+Take an array and recursively processes its
+contents. Stores the indices into the offset table of the
+offset objects pointing to its value. Returns the index
+into the offset table of the offset object that points to
+its location in the binary file.
+
+=cut
+
 sub write_array {
     my $self    = shift;
     my $fh      = $self->{fh};
@@ -153,11 +263,29 @@ sub write_array {
     return ( @{ $self->{index} } - 1 );
 }
 
+=head2 write_UID
+
+Takes a UID and returns the index into the offset table of
+the offset object that points to its location in the binary
+file. Passes the UID off to write_integer for actual
+writing, since they're processed in the same manner, simply
+with different types.
+
+=cut
+
 sub write_UID {
     my $self = shift;
     my ($id) = @_;
     return $self->write_integer( $id, "8" );
 }
+
+=head2 write_real
+
+Takes a float and returns the index into the offset table
+of the offset object that points to its location in the
+binary file. The digits of the float are packed in reverse.
+
+=cut
 
 sub write_real {
     my $self    = shift;
@@ -167,6 +295,14 @@ sub write_real {
     return $self->binary_write($obj);
 }
 
+=head2 write_date
+
+Takes a float and returns the index into the offset table
+of the offset object that points to its location in the
+binary file. Dates are treated like ordinary floats.
+
+=cut
+
 sub write_date {
     my $self   = shift;
     my ($date) = @_;
@@ -175,25 +311,78 @@ sub write_date {
     return $self->binary_write($obj);
 }
 
+=head2 write_null
+
+Takes a null and passes it to write_misc, along with an
+integer indicating what type of misc it is. The null
+belongs to the misc category, a group of data types not
+easily represented in perl. Miscs are only written with the
+header byte containing a 0 to indicate that they are a misc
+and their misc type.
+
+=cut
+
 sub write_null {
     my $self = shift;
     return $self->write_misc( 0, @_ );
 }
+
+=head2 write_false
+
+Takes a false and passes it to write_misc, along with an
+integer indicating what type of misc it is. The false
+belongs to the misc category, a group of data types not
+easily represented in perl. Miscs are only written with the
+header byte containing a 0 to indicate that they are a misc
+and their misc type.
+
+=cut
 
 sub write_false {
     my $self = shift;
     return $self->write_misc( 8, @_ );
 }
 
+=head2 write_true
+
+Takes a true and passes it to write_misc, along with an
+integer indicating what type of misc it is. The true
+belongs to the misc category, a group of data types not
+easily represented in perl. Miscs are only written with the
+header byte containing a 0 to indicate that they are a misc
+and their misc type.
+
+=cut
+
 sub write_true {
     my $self = shift;
     return $self->write_misc( 9, @_ );
 }
 
+=head2 write_fill
+
+Takes a fill and passes it to write_misc, along with an
+integer indicating what type of misc it is. The fill
+belongs to the misc category, a group of data types not
+easily represented in perl. Miscs are only written with the
+header byte containing a 0 to indicate that they are a misc
+and their misc type.
+
+=cut
+
 sub write_fill {
     my $self = shift;
     return $self->write_misc( 15, @_ );
 }
+
+=head2 write_misc
+
+Takes an object belonging in the misc categorty (false,
+null, true or fill) and returns the index into the offset
+table of the offset object that points to its location in
+the file.
+
+=cut
 
 sub write_misc {
     my $self = shift;
@@ -201,6 +390,15 @@ sub write_misc {
     my $obj = $self->make_type( "0", $type );
     return $self->binary_write($obj);
 }
+
+=head2 write_data
+
+Takes some binary data and returns the index into the
+offset table of the offset object that points to its
+location in the file. Doesn't attempt to process the data
+at all.
+
+=cut
 
 sub write_data {
     my $self = shift;
@@ -210,6 +408,15 @@ sub write_data {
     my $obj = $self->make_type( 4, $len ) . $data;
     return $self->binary_write($obj);
 }
+
+=head2 count
+
+Counts the number of objects in the provided data. Does not
+take into account duplicates, so this number might be
+slightly higher than the number of objects that is
+indicated in the 32-byte trailer.
+
+=cut
 
 sub count {
 
@@ -232,6 +439,15 @@ sub count {
     }
 }
 
+=head2 binary_write
+
+Does the actual writing to the binary file. Takes some
+binary data and writes it. Also adds the location of the
+binary data to the offset table and returns the index into
+the offset table of the current object.
+
+=cut
+
 sub binary_write {
     my $self    = shift;
     my $fh      = $self->{fh};
@@ -241,6 +457,14 @@ sub binary_write {
     push @{ $self->{index} }, $current;
     return ( @{ $self->{index} } - 1 );
 }
+
+=head2 power
+
+Calculates the number of bytes necessary to encode an
+integer. Returns a power of 2 indicating the number of
+bytes.
+
+=cut
 
 sub power {
     my $self = shift;
@@ -264,6 +488,13 @@ sub power {
     }
 }
 
+=head2 bytes
+
+Calculates the number of bytes necessary to encode an
+integer. Returns the actual number of bytes.
+
+=cut
+
 sub bytes {
     my $self = shift;
     my ($int) = @_;
@@ -283,6 +514,13 @@ sub bytes {
         return 1;
     }
 }
+
+=head2 pack_in
+
+Takes either a power of 2 or a number of bytes and returns
+the format pack() needs for encoding.
+
+=cut
 
 sub pack_in {
 
