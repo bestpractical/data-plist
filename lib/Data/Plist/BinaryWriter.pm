@@ -508,15 +508,15 @@ integer C<$int>. Returns the actual number of bytes.
 sub bytes {
     my $self = shift;
     my ($int) = @_;
-    if ( $int > 2**24 ) {
+    if ( $int >= 2**24 ) {
         return 4;
 
         # actually refers to 4 bytes
-    } elsif ( $int > 2**16 ) {
+    } elsif ( $int >= 2**16 ) {
         return 3;
 
         # actually refers to 3 bytes
-    } elsif ( $int > 255 ) {
+    } elsif ( $int >= 256 ) {
         return 2;
 
         # I'm sure you see the trend
