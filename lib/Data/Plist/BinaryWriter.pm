@@ -380,7 +380,7 @@ sub write_fill {
 Takes an integer indicating an object belonging to the misc
 category C<$type> (false, null, true or fill) and returns
 the index into the offset table of the offset object that
-points to its location in the file. Miscs are a groupo of
+points to its location in the file. Miscs are a group of
 data types not easily represented in Perl, and they are
 written with the only header byte containing a 0 to
 indicate that they are a misc and their misc type.
