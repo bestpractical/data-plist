@@ -16,8 +16,8 @@ from Perl data structures
 
 =head1 DESCRIPTION
 
-C<Data::Plist::BinaryWriter> takes serialized perl data
-structures (see L<Data::Plist/Serialized data>) and
+C<Data::Plist::BinaryWriter> takes perl data structures,
+serializes them (see L<Data::Plist/Serialized data>) and
 recursively writes to a given filehandle in Apple's binary
 property list format.
 
@@ -37,7 +37,7 @@ use base qw/Data::Plist::Writer/;
 
 =head2 write_fh $fh, $data
 
-Takes a serialized data structure C<$data> (see
+Takes a perl data structure C<$data>, serializes it (see
 L<Data::Plist/Serialized data>) and writes it to the given
 filehandle C<$fh> in Apple's binary property list format.
 

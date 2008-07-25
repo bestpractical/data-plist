@@ -1,14 +1,58 @@
+=head1 NAME
+
+Data::Plist::Writer - Object serializer and abstact
+superclass for BinaryWriter and XMLWriter
+
+=head1 SYNOPSIS
+
+ # Create new
+ Data::Plist::BinaryWriter->new;
+
+ # Writing to a string ($ret is binary output)
+ my $ret = $write->write($data);
+
+ # Writing to a file C<$filename>
+ $write->write($filename, $data);
+
+=head1 DESCRIPTION
+
+C<Data::Plist::Writer> is the abstract superclass of
+BinaryWriter and XMLWriter. It takes perl data structures,
+serializes them (see L<Data::Plist/Serialized data>), and
+recursively writes to a given filehandle in the desired
+format.
+
+=cut
+
 package Data::Plist::Writer;
 
 use strict;
 use warnings;
 use Scalar::Util;
 
+=head1 METHODS
+
+=cut
+
+=head2 new
+
+Abstract method that creates a new writer.
+
+=cut
+
 sub new {
     my $class = shift;
     my %args = ( serialize => 1, @_ );
     return bless \%args => $class;
 }
+
+=head2 write $filehandle, $object
+
+Takes a perl data structure C<$object> and writes to the
+given filehandle C<$filehandle>. Can also write to a string
+if C<$filehandle> is not defined.
+
+=cut
 
 sub write {
     my $self   = shift;
@@ -30,6 +74,15 @@ sub write {
     }
     return;
 }
+
+=head2 fold_uids $data
+
+Takes a slightly modified Cbjective C iCal data structure
+C<$data> unfolds it, assigning UIDs to its
+contents. Returns a nested collection of arrays formatted
+for writing.
+
+=cut
 
 sub fold_uids {
     my $self = shift;
@@ -55,6 +108,13 @@ sub fold_uids {
     }
 }
 
+=head2 serialize_value $data
+
+Takes a perl data structure C<$data> and turns it into a
+series of nested arrays of the format [datatype => data] in
+preparation for writing.
+
+=cut
 sub serialize_value {
     my $self = shift;
     my ($value) = @_;
@@ -86,6 +146,13 @@ sub serialize_value {
         return [ string => $value ];
     }
 }
+
+=head2 serialize $data
+
+Takes a data structure C<$data> and determines what sort of
+serialization it should go through.
+
+=cut
 
 sub serialize {
     my $self   = shift;
