@@ -36,7 +36,7 @@ use Scalar::Util;
 
 =head2 new
 
-Abstract method that creates a new writer.
+Creates a new writer.
 
 =cut
 
@@ -46,11 +46,16 @@ sub new {
     return bless \%args => $class;
 }
 
-=head2 write $filehandle, $object
+=head2 write $filehandle, $data
 
-Takes a perl data structure C<$object> and writes to the
-given filehandle C<$filehandle>. Can also write to a string
-if C<$filehandle> is not defined.
+=head2 write $filename, $data
+
+=head2 write $data
+
+Takes a perl data structure C<$data> and writes to the
+given filehandle C<$filehandle>, or filename
+C<$filename>. Can also write to a string if C<$filehandle>
+is not defined.
 
 =cut
 
@@ -77,10 +82,10 @@ sub write {
 
 =head2 fold_uids $data
 
-Takes a slightly modified Cbjective C iCal data structure
-C<$data> unfolds it, assigning UIDs to its
-contents. Returns a nested collection of arrays formatted
-for writing.
+Takes a slightly modified Objective C archive made with
+NSKeyedArchiver C<$data> and unfolds it, assigning UIDs to
+its contents. Returns a nested collection of arrays
+formatted for writing.
 
 =cut
 
@@ -111,8 +116,10 @@ sub fold_uids {
 =head2 serialize_value $data
 
 Takes a perl data structure C<$data> and turns it into a
-series of nested arrays of the format [datatype => data] in
-preparation for writing.
+series of nested arrays of the format [datatype => data]
+(see L<Data::Plist/Serialized data>) in preparation for
+writing. This is an internal data structure that should be
+immediately handed off to a writer.
 
 =cut
 sub serialize_value {
@@ -151,6 +158,11 @@ sub serialize_value {
 
 Takes a data structure C<$data> and determines what sort of
 serialization it should go through.
+
+Objects wishing to provide their own serializations should
+have a 'serialize' method, which should return something in
+the internal structure mentioned above (see also
+L<Data::Plist/Serialized data>).
 
 =cut
 
