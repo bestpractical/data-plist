@@ -1,3 +1,24 @@
+=head1 NAME
+
+Data::Plist::BinaryReader - Creates Data::Plists from binary files
+
+=head1 SYNOPSIS
+
+ # Create new
+ my $read = Data::Plist::BinaryReader->new;
+
+ # Read from a string
+ my $plist = $read->open_string($binarystring);
+
+ # Read from a binary file
+ $plist = $read->open_fh($filename);
+
+=head1 DESCRIPTION
+
+C<Data::Plist::BinaryReader>
+
+=cut
+
 package Data::Plist::BinaryReader;
 
 use strict;
@@ -9,6 +30,14 @@ use Data::Plist;
 use Encode qw(decode);
 use Fcntl qw(:seek);
 use Math::BigInt;
+
+=head2 read_misc $type
+
+Takes an integer C<$type> indicating which misc is being
+read. Returns an array containing the type of misc and its
+associated integer.
+
+=cut
 
 sub read_misc {
     my $self = shift;
@@ -26,6 +55,17 @@ sub read_misc {
         return [ "???", $type ];
     }
 }
+
+=head2 read_integer $size
+
+Takes an integer C<$size> indicating number of bytes needed
+to encode the integer (2**C<$size> = number of
+bytes). Reads that number of bytes from the filehandle and
+unpacks it. Returns an array containing the string
+"integer" and the value of the integer read from the
+filehandle.
+
+=cut
 
 sub read_integer {
     my $self = shift;
@@ -53,6 +93,17 @@ sub read_integer {
     return [ "integer", $val ];
 }
 
+=head2 read_real $size
+
+Takes an integer C<$size> indicating the number of bytes
+needed to encode the float (see L</read_integer>). Reads
+that number of bytes from the filehandle and unpacks
+it. The number of bytes is limited to 4 and 8. Returns an
+array containing the string "array" and the float read from
+the filehandle.
+
+=cut
+
 sub read_real {
     my $self = shift;
     my ($size) = @_;
@@ -70,6 +121,16 @@ sub read_real {
     return [ "real", $val ];
 }
 
+=head2 read_date $size
+
+Takes an integer C<$size>, checks to ensure that it's
+within the proper boundaries, and then passes it to
+L</read_real> to be dealt with, since dates are just stored
+as floats. Returns an array containing the string "date"
+and the date read from the filehandle.
+
+=cut
+
 sub read_date {
     my $self = shift;
     my ($size) = @_;
@@ -79,6 +140,16 @@ sub read_date {
     # Dates are just stored as floats
     return [ "date", $self->read_real($size)->[1] ];
 }
+
+=head2 read_data $size
+
+Takes an integer C<$size>, indicating the number of bytes
+of binary data stored and reads them from the
+filehandle. Checks if the bytes are actually another binary
+plist and unpacks it if so. Returns an array containing the
+string "data" and the binary data read from the filehandle.
+
+=cut
 
 sub read_data {
     my $self = shift;
@@ -95,6 +166,16 @@ sub read_data {
     return [ "data", $buf ];
 }
 
+=head2 read_string $size
+
+Takes an integer C<$size> indicating the number of bytes
+used to encode the UTF-8 string stored and reads them from
+the filehandle. Marks them as Unicode and returns an array
+containing the string "string" and the string read from the
+filehandle.
+
+=cut
+
 sub read_string {
     my $self = shift;
     my ($size) = @_;
@@ -107,6 +188,15 @@ sub read_string {
     return [ "string", $buf ];
 }
 
+=head2 read_ustring
+
+Takes an integer C<$size> indicating the number of bytes
+used to encode the UTF-16 string stored and reads them from
+the filehandle. Returns an array containing the string
+"ustring" and the string read from the filehandle.
+
+=cut
+
 sub read_ustring {
     my $self = shift;
     my ($size) = @_;
@@ -117,6 +207,15 @@ sub read_ustring {
     return [ "ustring", decode( "UTF-16BE", $buf ) ];
 }
 
+=head2 read_refs $count
+
+Takes an integer C<$count> indicating the number of
+references in either a dict or an array. Returns the
+references pointing to the locations fo the contents of the
+dict or array.
+
+=cut
+
 sub read_refs {
     my $self = shift;
     my ($count) = @_;
@@ -124,6 +223,15 @@ sub read_refs {
     read( $self->{fh}, $buf, $count * $self->{refsize} );
     return unpack( ( $self->{refsize} == 1 ? "C*" : "n*" ), $buf );
 }
+
+=head2 read_array $size
+
+Takes an integer C<$size> indicating the number of objects
+that are contained in the array. Returns an array
+containing the string "array" and the references pointing
+to the location of the contents of the array in the file.
+
+=cut
 
 sub read_array {
     my $self = shift;
