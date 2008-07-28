@@ -242,6 +242,16 @@ sub read_array {
     ];
 }
 
+=head2 read_dict $size
+
+Takes an integer C<$size> indicating the number of
+key-value pairs contained in the dict. Returns an array
+containing the string "dict" and the references pointing to
+the location of the key-value pairs of the dict in the
+file.
+
+=cut
+
 sub read_dict {
     my $self = shift;
     my ($size) = @_;
@@ -261,6 +271,17 @@ sub read_dict {
 
     return [ "dict", \%dict ];
 }
+
+=head2 read_uid $size
+
+Takes an integer C<$size> indicating number of bytes needed
+to encode the uid (2**C<$size> = number of bytes) and then
+passes it to L</read_integer> to be dealt with, since uids
+are stored identically to integers. Returns an array
+containing the string "uid" and the uid read from the
+filehandle.
+
+=cut
 
 sub read_uid {
     my $self = shift;
@@ -309,6 +330,15 @@ sub binary_read {
     die "Can't $method" unless $self->can($method);
     return $self->$method($size);
 }
+
+=head2 open_string $string
+
+Takes a string of binary information in Apple's binary
+property list format C<$string>. Checks to ensure that it's
+of the correct format and then passes its superclass's
+L</open_string>.
+
+=cut
 
 sub open_string {
     my $self = shift;
