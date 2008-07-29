@@ -15,7 +15,9 @@ Data::Plist::BinaryReader - Creates Data::Plists from binary files
 
 =head1 DESCRIPTION
 
-C<Data::Plist::BinaryReader>
+C<Data::Plist::BinaryReader> takes data formatted as one of
+Apple's binary property lists, either from a string or a
+filehandle and returns it as a C<Data::Plist>.
 
 =cut
 
@@ -292,6 +294,16 @@ sub read_uid {
     return [ UID => $v ];
 }
 
+=head2 binary_read $objNum
+
+Takes an integer indicating the offset number of the
+current object C<$objNum> and checks to make sure it's
+valid. Reads the object's type and size and then matches
+the type to its read method. Passes the size to the correct
+method and returns what that method returns.
+
+=cut
+
 sub binary_read {
     my $self = shift;
     my ($objNum) = @_;
@@ -336,7 +348,9 @@ sub binary_read {
 Takes a string of binary information in Apple's binary
 property list format C<$string>. Checks to ensure that it's
 of the correct format and then passes its superclass's
-L</open_string>.
+L</open_string>. The error proofing is done because
+seeking in in-memory filehandles can cause perl 5.8.8 to
+explode with "Out of memory" or "panic: memory wrap".
 
 =cut
 
@@ -344,9 +358,6 @@ sub open_string {
     my $self = shift;
     my ($str) = @_;
 
-    # Seeking in in-memory filehandles can cause perl 5.8.8 to explode
-    # with "Out of memory" or "panic: memory wrap"; Do some
-    # error-proofing here.
     die "Not a binary plist file\n"
         unless length $str >= 8 and substr( $str, 0, 8 ) eq "bplist00";
     die "Read of plist trailer failed\n"
@@ -356,6 +367,17 @@ sub open_string {
 
     return $self->SUPER::open_string($str);
 }
+
+=head2 open_fh $filehandle
+
+Used for reading binary data from a filehandle
+C<$filehandle> rather than a string. Opens the filehandle
+and sanity checks the header, trailer and offset
+table. Returns a C<Data::Plist> containing the top object
+of the filehandle after it's been passed to
+L</binary_read>.
+
+=cut
 
 sub open_fh {
     my $self = shift;
