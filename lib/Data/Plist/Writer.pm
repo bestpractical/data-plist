@@ -6,13 +6,13 @@ superclass for BinaryWriter and XMLWriter
 =head1 SYNOPSIS
 
  # Create new
- Data::Plist::BinaryWriter->new;
+ my $write = Data::Plist::BinaryWriter->new;
 
  # Writing to a string ($ret is binary output)
  my $ret = $write->write($data);
 
  # Writing to a file C<$filename>
- $write->write($filename, $data);
+ $ret = $write->write($filename, $data);
 
 =head1 DESCRIPTION
 
