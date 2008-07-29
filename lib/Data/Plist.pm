@@ -1,3 +1,24 @@
+=head1 NAME
+
+Data::Plist - object representing a property list
+
+=head1 SYNOPSIS
+
+ #load
+ my $plist = Data::Plist->new($data);
+
+=head1 DESCRIPTION
+
+
+
+=cut
+
+=head1 SERIALIZED DATA
+
+
+
+=cut
+
 package Data::Plist;
 
 use strict;
@@ -8,6 +29,12 @@ use UNIVERSAL::require;
 
 use vars qw/$VERSION/;
 $VERSION = "0.1";
+
+=head2 new
+
+Creates a new plist.
+
+=cut
 
 sub new {
     my $class = shift;
@@ -42,15 +69,35 @@ sub collapse {
     return $data;
 }
 
+=head2 raw_data
+
+Returns the plist as a set of nested arrays of the format 
+[ datatype => $data ].
+
+=cut
+
 sub raw_data {
     my $self = shift;
     return $self->{data};
 }
 
+=head2 data
+
+Returns the plist as its corresponding perl data structure.
+
+=cut
+
 sub data {
     my $self = shift;
     return $self->collapse( $self->raw_data );
 }
+
+=head2 is_archive
+
+Checks if the plist is Foundation::LibraryToDo
+object. Returns 1 if true and undef if false.
+
+=cut
 
 sub is_archive {
     my $self = shift;
@@ -134,6 +181,12 @@ sub raw_object {
     return unless $self->is_archive;
     return $self->unref( $self->raw_data->[1]{'$top'}[1]{root} );
 }
+
+=head2 object
+
+Returns an Objective C archive made with NSKeyedArchiver.
+
+=cut
 
 sub object {
     my $self   = shift;
