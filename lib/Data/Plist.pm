@@ -37,6 +37,13 @@ serialized data.
 
 =head1 KEYED ARCHIVES
 
+Apple uses binary property lists as a serialization format from
+Objective C, in a format C<NSKeyedArchiver>.  L<Data::Plist> has the
+capability to recognize property lists which were generated using
+C<NSKeyedArchiver>, and to construct perl objects based on the
+information in the property list.  Objects thus created are blessed
+under the C<Foundation> namespace.  Thus, the root ancestor of all
+Objective C objects thus imported is L<Foundation::NSObject>.
 
 =cut
 
