@@ -20,6 +20,10 @@ Data::Plist - object representing a property list
 
 =head1 DESCRIPTION
 
+Plists are intermediate structures from which nested array
+structures of the format specified in L</SERIALIZED DATA>,
+perl data structures and Objective C data structures can be
+obtained.
 
 =cut
 
@@ -187,6 +191,15 @@ sub unref {
         return $p;
     }
 }
+
+=head2 reify $data
+
+Takes serialized data (see L</SERIALIZED DATA>) C<$data>
+and checks if it's a keyed archive (see L</SERIALIZED
+DATA>). If the data is a keyed archive, it blesses it into
+the appropriate perl class.
+
+=cut
 
 sub reify {
     my $self = shift;

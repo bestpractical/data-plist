@@ -37,11 +37,13 @@ use Scalar::Util;
 
 =head2 new
 
-Creates a new writer.
+Creates a new writer. 'serialize' is set to 1 since it's
+assumed that data being passed in will be perl data
+structures that need to be serialized. Users may set it to
+0 when creating a writer if they wish to use preserialized
+data.
 
 =cut
-
-# XXX: Doc the serialize argument
 
 sub new {
     my $class = shift;
@@ -84,16 +86,12 @@ sub write {
 
 =head2 fold_uids $data
 
-Takes a slightly modified Objective C archive made with
-NSKeyedArchiver C<$data> and unfolds it, assigning UIDs to
-its contents. Returns a nested collection of arrays
-formatted for writing.
+Takes a serialized object C<$data> (see
+L<Data::Plist/SERIALIZED DATA>) and rewrites it as a keyed
+archive (see L<Data::Plist/KEYED ARCHIVES>) by folding on
+UIDs.
 
 =cut
-
-# XXX This implies that $data is an NSKeyedArchiver.  It takes a
-# serialized object, and rewrites it into the format that
-# NSKeyedArchiver would have written, by folding on UIDs.
 
 sub fold_uids {
     my $self = shift;
