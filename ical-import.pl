@@ -18,5 +18,5 @@ for my $f (@ARGV) {
     }
 
     my $p = Data::Plist::BinaryReader->open_string($content);
-    print Data::Plist::XMLWriter->write($p->object("Foundation"));
+    print Data::Plist::XMLWriter->write($p->object);
 }

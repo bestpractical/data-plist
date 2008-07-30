@@ -143,7 +143,7 @@ sub unref {
         and ref $p->[1]
         and $p->[1]->isa("Data::Plist") )
     {
-        return $p->[1]->raw_object;
+        return $p->[1]->_raw_object;
     } else {
         return $p;
     }
@@ -181,7 +181,7 @@ sub reify {
     }
 }
 
-sub raw_object {
+sub _raw_object {
     my $self = shift;
     return unless $self->is_archive;
     return $self->unref( $self->raw_data->[1]{'$top'}[1]{root} );
@@ -202,7 +202,7 @@ sub object {
     require Foundation::NSObject;
 
     return unless $self->is_archive;
-    return $self->reify( $self->collapse( $self->raw_object ) );
+    return $self->reify( $self->collapse( $self->_raw_object ) );
 }
 
 =head1 DEPENDENCIES
