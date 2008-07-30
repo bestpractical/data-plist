@@ -33,6 +33,8 @@ use Encode qw(decode);
 use Fcntl qw(:seek);
 use Math::BigInt;
 
+=head1 METHODS
+
 =head2 read_misc $type
 
 Takes an integer C<$type> indicating which misc is being

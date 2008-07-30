@@ -17,7 +17,7 @@ from Perl data structures
 =head1 DESCRIPTION
 
 C<Data::Plist::BinaryWriter> takes perl data structures,
-serializes them (see L<Data::Plist/Serialized data>) and
+serializes them (see L<Data::Plist/SERIALIZED DATA>) and
 recursively writes to a given filehandle in Apple's binary
 property list format.
 
@@ -38,7 +38,7 @@ use base qw/Data::Plist::Writer/;
 =head2 write_fh $fh, $data
 
 Takes a perl data structure C<$data>, serializes it (see
-L<Data::Plist/Serialized data>) and writes it to the given
+L<Data::Plist/SERIALIZED DATA>) and writes it to the given
 filehandle C<$fh> in Apple's binary property list format.
 
 The format starts with "bplist00" and contains a 32-byte
@@ -88,7 +88,7 @@ sub write_fh {
 =head2 dispatch $data
 
 Takes serialized data structure C<$data> (see
-L<Data::Plist/Serialized data>) and checks its type. Checks
+L<Data::Plist/SERIALIZED DATA>) and checks its type. Checks
 the object against previously written objects. If no match
 is found, calls the appropriate write_ method. Returns the
 index into the offset table of the offset object that
@@ -184,9 +184,9 @@ sub write_integer {
 
 =head2 write_string $string
 
-Takes a UTF-8 encoded string C<$string> and returns the
-index into the offset table of the offset object that
-points to its location in the binary file.
+Takes a string C<$string> and returns the index into the offset table
+of the offset object that points to its location in the binary file.
+It is encoded in the file using UTF-8.
 
 =cut
 
@@ -200,12 +200,13 @@ sub write_string {
 
 =head2 write_ustring $ustring
 
-Takes a UTF-16 encoded string C<$ustring> and returns the
-index into the offset table of the offset object that
-points to its location in the binary file.
+Takes a string C<$ustring> and returns the index into the offset table
+of the offset object that points to its location in the binary file.
 
-Currently unimplemented - strings are simply passed on to
-write_string, which treats them as being encoded in UTF-8.
+While C<ustrings> are technically supposed to be stored in UTF-16,
+there is no known reason for them to not be written as UTF-8 encoded
+C<string>s instead; thus, for simplicity, all C<ustring>s are written
+as C<string>s.
 
 =cut
 
@@ -380,10 +381,11 @@ sub write_fill {
 Takes an integer indicating an object belonging to the misc
 category C<$type> (false, null, true or fill) and returns
 the index into the offset table of the offset object that
-points to its location in the file. Miscs are a group of
-data types not easily represented in Perl, and they are
-written with the only header byte containing a 0 to
-indicate that they are a misc and their misc type.
+points to its location in the file.
+
+Miscs are a group of data types not easily represented in Perl, and
+they are written with the only header byte containing a 0 to indicate
+that they are a misc and their misc type.
 
 =cut
 
@@ -424,7 +426,7 @@ trailer.
 
 sub count {
 
-  # this might be slightly over, since it doesn't take into account duplicates
+    # this might be slightly over, since it doesn't take into account duplicates
     my $self       = shift;
     my ($arrayref) = @_;
     my $type       = $arrayref->[0];

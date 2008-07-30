@@ -16,9 +16,9 @@ Data::Plist::Reader - Abstract superclass for BinaryReader
 =head1 DESCRIPTION
 
 C<Data::Plist::Reader> is an abstract superclass of
-BinaryReader. Takes either a string or a filehandle
-containing binary data formatted as an Apple binary
-property list and returns it as a C<Data::Plist>.
+BinaryReader. Takes either a string or a filehandle containing data
+formatted as an Apple property list and returns it as a
+C<Data::Plist>.
 
 =cut
 
@@ -26,6 +26,8 @@ package Data::Plist::Reader;
 
 use strict;
 use warnings;
+
+=head1 METHODS
 
 =head2 new
 

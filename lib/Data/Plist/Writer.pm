@@ -17,9 +17,9 @@ superclass for BinaryWriter and XMLWriter
 =head1 DESCRIPTION
 
 C<Data::Plist::Writer> is the abstract superclass of
-BinaryWriter and XMLWriter. It takes perl data structures,
-serializes them (see L<Data::Plist/Serialized data>), and
-recursively writes to a given filehandle in the desired
+L<Data::Plist::BinaryWriter> and L<Data::Plist::XMLWriter>. It takes
+perl data structures, serializes them (see L<Data::Plist/SERIALIZED
+DATA>), and recursively writes to a given filehandle in the desired
 format.
 
 =cut
@@ -28,6 +28,7 @@ package Data::Plist::Writer;
 
 use strict;
 use warnings;
+use Storable;
 use Scalar::Util;
 
 =head1 METHODS
@@ -39,6 +40,8 @@ use Scalar::Util;
 Creates a new writer.
 
 =cut
+
+# XXX: Doc the serialize argument
 
 sub new {
     my $class = shift;
@@ -52,10 +55,9 @@ sub new {
 
 =head2 write $data
 
-Takes a perl data structure C<$data> and writes to the
-given filehandle C<$filehandle>, or filename
-C<$filename>. Can also write to a string if C<$filehandle>
-is not defined.
+Takes a perl data structure C<$data> and writes to the given
+filehandle C<$filehandle>, or filename C<$filename>.  If only the
+C<$data> is provided, returns the data to be written, as a string.
 
 =cut
 
@@ -89,13 +91,17 @@ formatted for writing.
 
 =cut
 
+# XXX This implies that $data is an NSKeyedArchiver.  It takes a
+# serialized object, and rewrites it into the format that
+# NSKeyedArchiver would have written, by folding on UIDs.
+
 sub fold_uids {
     my $self = shift;
     my $data = shift;
 
     if ( $data->[0] eq "UID" ) {
         require Digest::MD5;
-        my $digest = Digest::MD5::md5_hex( YAML::Dump( $data->[1] ) );
+        my $digest = Digest::MD5::md5_hex( Storable::freeze( $data->[1] ) );
         if ( exists $self->{objcache}{$digest} ) {
             return [ UID => $self->{objcache}{$digest} ];
         }
@@ -117,11 +123,12 @@ sub fold_uids {
 
 Takes a perl data structure C<$data> and turns it into a
 series of nested arrays of the format [datatype => data]
-(see L<Data::Plist/Serialized data>) in preparation for
+(see L<Data::Plist/SERIALIZED DATA>) in preparation for
 writing. This is an internal data structure that should be
 immediately handed off to a writer.
 
 =cut
+
 sub serialize_value {
     my $self = shift;
     my ($value) = @_;
@@ -162,7 +169,7 @@ serialization it should go through.
 Objects wishing to provide their own serializations should
 have a 'serialize' method, which should return something in
 the internal structure mentioned above (see also
-L<Data::Plist/Serialized data>).
+L<Data::Plist/SERIALIZED DATA>).
 
 =cut
 
