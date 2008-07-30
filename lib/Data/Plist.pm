@@ -4,8 +4,21 @@ Data::Plist - object representing a property list
 
 =head1 SYNOPSIS
 
- #load
+ # Create a new plist containing $data
  my $plist = Data::Plist->new($data);
+
+ # Get nested arrays containing the perl data structure's
+ # information
+ my $ret = $plist->raw_data;
+
+ # Get perl data structure
+ $ret = $plist->data;
+
+ $ret = $plist->raw_object;
+
+ # Get an Objective C object
+ $ret = $plist->object;
+
 
 =head1 DESCRIPTION
 
@@ -13,6 +26,14 @@ Data::Plist - object representing a property list
 
 =head1 SERIALIZED DATA
 
+Perl data structures that have been serialized become
+nested array structures containing their data and their
+data type. Example:
+
+[ array => [ string => "kitten" ], [ integer => 42], [ real => 3.14159 ] ]
+
+Array references are passed around when dealing with
+serialized data.
 
 =head1 KEYED ARCHIVES
 
@@ -46,6 +67,13 @@ sub new {
     return bless { data => undef, @_ } => $class;
 }
 
+=head2 collapse $data
+
+Takes an array of serialized data C<$data>. Recursively
+returns the actual data, without the datatype labels.
+
+=cut
+
 sub collapse {
     my $self = shift;
     my ($data) = @_;
@@ -71,7 +99,6 @@ sub collapse {
         return $data->[1];
     }
 
-    return $data;
 }
 
 =head2 raw_data
@@ -124,6 +151,12 @@ sub is_archive {
 
     return 1;
 }
+
+=head2 unref
+
+Recursively strips references from the plist.
+
+=cut
 
 sub unref {
     my $self = shift;
@@ -182,6 +215,7 @@ sub reify {
 }
 
 sub _raw_object {
+
     my $self = shift;
     return unless $self->is_archive;
     return $self->unref( $self->raw_data->[1]{'$top'}[1]{root} );
