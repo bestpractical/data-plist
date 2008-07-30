@@ -14,8 +14,6 @@ Data::Plist - object representing a property list
  # Get perl data structure
  $ret = $plist->data;
 
- $ret = $plist->raw_object;
-
  # Get an Objective C object
  $ret = $plist->object;
 
@@ -23,6 +21,7 @@ Data::Plist - object representing a property list
 =head1 DESCRIPTION
 
 
+=cut
 
 =head1 SERIALIZED DATA
 

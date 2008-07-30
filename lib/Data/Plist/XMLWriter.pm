@@ -1,3 +1,28 @@
+=head1 NAME
+
+Data::Plist::XMLWriter - writes XML property lists from
+perl data structures.
+
+=head1 SYNOPSIS
+
+ # Create new
+ my $write = Data::Plist::XMLWriter->new;
+
+ # Writing to a string
+ my $str = $write->write($data);
+
+ # Writing to a file C<$filename>
+ $write->write($filename, $data);
+
+=head1 DESCRIPTION
+
+C<Data::Plist::XMLWriter> takes perl data structures,
+serializes them (see L<Data::Plist/SERIALIZED DATA>) and
+recursively writes to a given filehandle in Apple's XML
+property list format.
+
+=cut
+
 package Data::Plist::XMLWriter;
 
 use strict;
@@ -6,6 +31,16 @@ use warnings;
 use base qw/Data::Plist::Writer/;
 use XML::Writer;
 use MIME::Base64 qw//;
+
+=head2 write_fh $fh, $data
+
+Takes a perl data structure C<$data>, serializes it (see
+L<Data::Plist/SERIALIZED DATA>) and passes it to
+L</xml_write> to be written to the filehandle C<$fh>. Also
+writes the headers and footers for the XML document. Returns
+1 to indicate success.
+
+=cut
 
 sub write_fh {
     my $self = shift;
@@ -28,6 +63,14 @@ sub write_fh {
 
     return 1;
 }
+
+=head2 xml_write
+
+Takes serialized perl structures (see
+L<Data::Plist/SERIALIZED DATA>) and recursively checks tags
+and writes the data to the filehandle.
+
+=cut
 
 sub xml_write {
     my $self = shift;
