@@ -1,9 +1,9 @@
-package Foundation::NSMutableArray;
+package Data::Plist::Foundation::NSMutableArray;
 
 use strict;
 use warnings;
 
-use base qw/Foundation::NSArray/;
+use base qw/Data::Plist::Foundation::NSArray/;
 
 sub serialize {
     my $self = shift;

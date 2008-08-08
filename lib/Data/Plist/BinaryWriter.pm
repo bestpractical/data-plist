@@ -101,6 +101,7 @@ sub dispatch {
     my ($arrayref) = @_;
     my $type       = $arrayref->[0];
     my $method     = "write_" . $type;
+    local $Storable::canonical = 1;
     my $digest = eval { Digest::MD5::md5_hex( Storable::freeze($arrayref) ) };
     die "Can't $method" unless $self->can($method);
     $self->{objcache}{$digest} = $self->$method( $arrayref->[1] )

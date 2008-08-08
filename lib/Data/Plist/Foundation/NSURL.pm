@@ -1,9 +1,9 @@
-package Foundation::NSURL;
+package Data::Plist::Foundation::NSURL;
 
 use strict;
 use warnings;
 
-use base qw/Foundation::NSObject URI::http/;
+use base qw/Data::Plist::Foundation::NSObject URI::http/;
 
 sub replacement {
     my $self = shift;

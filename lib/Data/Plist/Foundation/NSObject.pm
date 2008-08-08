@@ -1,4 +1,4 @@
-package Foundation::NSObject;
+package Data::Plist::Foundation::NSObject;
 
 use strict;
 use warnings;
@@ -21,14 +21,14 @@ sub serialize_class {
     $self = ref $self if ref $self;
 
     my $short = $self;
-    $short =~ s/^Foundation:://;
+    $short =~ s/^Data::Plist::Foundation:://;
     return [
         UID => [
             dict => {
                 '$classes' => [
                     array => [
-                        map { s/^Foundation:://; [ string => $_ ] }
-                            grep { $_->isa("Foundation::NSObject") }
+                        map { s/^Data::Plist::Foundation:://; [ string => $_ ] }
+                            grep { $_->isa("Data::Plist::Foundation::NSObject") }
                             Class::ISA::self_and_super_path($self)
                     ]
                 ],

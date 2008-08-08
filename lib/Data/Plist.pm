@@ -45,8 +45,9 @@ Objective C, in a format C<NSKeyedArchiver>.  L<Data::Plist> has the
 capability to recognize property lists which were generated using
 C<NSKeyedArchiver>, and to construct perl objects based on the
 information in the property list.  Objects thus created are blessed
-under the C<Foundation> namespace.  Thus, the root ancestor of all
-Objective C objects thus imported is L<Foundation::NSObject>.
+under the C<Data::Plist::Foundation> namespace.  Thus, the root
+ancestor of all Objective C objects thus imported is
+L<Data::Plist::Foundation::NSObject>.
 
 =cut
 
@@ -215,11 +216,11 @@ sub reify {
             and ref $class eq "HASH"
             and $class->{'$classname'} )
         {
-            my $classname = "Foundation::" . $class->{'$classname'};
+            my $classname = "Data::Plist::Foundation::" . $class->{'$classname'};
             if ( not $classname->require ) {
                 warn "Can't require $classname: $@\n";
-            } elsif ( not $classname->isa( "Foundation::NSObject" ) ) {
-                warn "$classname isn't a Foundation::NSObject\n";
+            } elsif ( not $classname->isa( "Data::Plist::Foundation::NSObject" ) ) {
+                warn "$classname isn't a Data::Plist::Foundation::NSObject\n";
             } else {
                 bless( $hash, $classname );
                 $hash = $hash->replacement;
@@ -244,15 +245,15 @@ sub _raw_object {
 
 If the plist is an Objective C object archive created with
 C<NSKeyedArchiver> (see L</KEYED ARCHIVES>), returns the object
-blessed into the corresponding class under L<Foundation::NSOjbect>.
-Otherwise, returns undef.
+blessed into the corresponding class under
+L<Data::Plist::Foundation::NSOjbect>.  Otherwise, returns undef.
 
 =cut
 
 sub object {
     my $self   = shift;
 
-    require Foundation::NSObject;
+    require Data::Plist::Foundation::NSObject;
 
     return unless $self->is_archive;
     return $self->reify( $self->collapse( $self->_raw_object ) );

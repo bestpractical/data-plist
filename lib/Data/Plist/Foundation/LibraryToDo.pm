@@ -1,9 +1,9 @@
-package Foundation::LibraryToDo;
+package Data::Plist::Foundation::LibraryToDo;
 
 use strict;
 use warnings;
 
-use base qw/Foundation::ToDo Class::Accessor/;
+use base qw/Data::Plist::Foundation::ToDo Class::Accessor/;
 
 my %mapping = (
     alarms       => "ToDo Alarms",

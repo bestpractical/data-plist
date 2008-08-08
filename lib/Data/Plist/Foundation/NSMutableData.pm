@@ -1,9 +1,9 @@
-package Foundation::NSMutableData;
+package Data::Plist::Foundation::NSMutableData;
 
 use strict;
 use warnings;
 
-use base qw/Foundation::NSData/;
+use base qw/Data::Plist::Foundation::NSData/;
 use Data::Plist::BinaryWriter;
 
 sub data {

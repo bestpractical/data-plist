@@ -1,5 +1,5 @@
 --- 
-abstract: ~
+abstract: object representing a property list
 author: 
   - Alex Vandiver <alexmv@mit.edu>
 distribution_type: module

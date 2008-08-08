@@ -1,9 +1,9 @@
-package Foundation::ToDoAlarm;
+package Data::Plist::Foundation::ToDoAlarm;
 
 use strict;
 use warnings;
 
-use base qw/Foundation::NSObject/;
+use base qw/Data::Plist::Foundation::NSObject/;
 
 sub serialize {
     my $self = shift;

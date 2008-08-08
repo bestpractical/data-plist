@@ -1,9 +1,9 @@
-package Foundation::NSDate;
+package Data::Plist::Foundation::NSDate;
 
 use strict;
 use warnings;
 
-use base qw/Foundation::NSObject DateTime/;
+use base qw/Data::Plist::Foundation::NSObject DateTime/;
 
 sub replacement {
     my $self = shift;

@@ -29,6 +29,7 @@ package Data::Plist::Writer;
 use strict;
 use warnings;
 use Storable;
+use Digest::MD5;
 use Scalar::Util;
 
 =head1 METHODS
@@ -98,7 +99,7 @@ sub fold_uids {
     my $data = shift;
 
     if ( $data->[0] eq "UID" ) {
-        require Digest::MD5;
+        local $Storable::canonical = 1;
         my $digest = Digest::MD5::md5_hex( Storable::freeze( $data->[1] ) );
         if ( exists $self->{objcache}{$digest} ) {
             return [ UID => $self->{objcache}{$digest} ];
@@ -140,7 +141,7 @@ sub serialize_value {
             my %hash = %{$value};
             $hash{$_} = $self->serialize_value( $hash{$_} ) for keys %hash;
             return [ dict => \%hash ];
-        } elsif ( $value->isa("Foundation::NSObject") ) {
+        } elsif ( $value->isa("Data::Plist::Foundation::NSObject") ) {
             return $value->serialize;
         } elsif ( $value->isa("DateTime") ) {
             return [ date => $value->epoch - 978307200
