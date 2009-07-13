@@ -1,4 +1,4 @@
-use Test::More no_plan => 1;
+use Test::More tests => 4;
 
 use strict;
 use warnings;
