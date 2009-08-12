@@ -46,11 +46,13 @@ round_trip( "The kyokeach is cute", 64 );
 # Ustring
 files("t/data/ustring.binary.plist");
 
-# Real number
-round_trip( 3.14159, 50 );
-
-# Negative real
-round_trip( -1.985, 50 );
+# Positive and negative reals -- we don't just use round_trip because
+# of rounding
+for my $val (3.14159, -1.985) {
+    my $write = Data::Plist::BinaryWriter->new;
+    $in = trip( $write, $val, 50 );
+    ok( abs($in->data - $val) < 0.000001, "Read back $val" );
+}
 
 # Date
 round_trip( DateTime->new( year => 2008, month => 7, day => 23 ), 50 );
