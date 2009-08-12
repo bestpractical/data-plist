@@ -6,7 +6,6 @@ use warnings;
 use Data::Plist::BinaryReader;
 use Data::Plist::BinaryWriter;
 use Data::Plist::Foundation::NSObject;
-use YAML;
 
 my $ret;
 my $read = Data::Plist::BinaryReader->new;
